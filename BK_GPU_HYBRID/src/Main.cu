@@ -6,7 +6,9 @@
 #include "Device/NeighbourGraph.h"
 #include "Device/GPUCSR.h"
 #include "kernels/kernels.cuh"
+#include "Host/BKInstance.h"
 #include <iostream>
+
 #include "cub/cub.cuh"
 
 //#include <cub/cub.cuh>
@@ -159,6 +161,9 @@ int main(int argc, char * argv[]) {
 
 	//GpuPivotSelect(*Ng, stack, *gpuGraph);
 
+	BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(gpuGraph,Ng,stack[0]);
+
+	instance->RunCliqueFinder(0);
 
 	//debug("hello");
 	fclose(fp);

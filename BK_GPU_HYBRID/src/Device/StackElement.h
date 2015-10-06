@@ -29,6 +29,21 @@ public:
 	StackElement();
 	~StackElement();
 
+	__host__ __device__
+	StackElement & operator= (const StackElement& element)
+	{
+		this->beginP = element.beginP;
+		this->beginR = element.beginR;
+		this->beginX = element.beginX;
+		this->currPSize = element.currPSize;
+		this->currRSize = element.currRSize;
+		this->currXSize = element.currXSize;
+		this->direction = element.direction;
+		this->pivot_index = element.pivot_index;
+		this->remainingNonNeighbour = element.remainingNonNeighbour;
+		return *this;
+	}
+
 };
 
 } /* namespace BK_GPU */

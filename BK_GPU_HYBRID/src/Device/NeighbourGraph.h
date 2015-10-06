@@ -46,6 +46,25 @@ public:
 	NeighbourGraph();
 	NeighbourGraph(int nodes, int neighbours);
 
+	__host__
+	NeighbourGraph* operator=(const NeighbourGraph *other)
+	{
+		this->cliqueSize=other->cliqueSize;
+		this->nodes=other->nodes;
+		this->totallength=other->totallength;
+
+		//std::cout << this->cliqueSize << " " << this->nodes << " " << this->totallength << std::endl;
+
+		gpuErrchk(cudaMemcpy(this->data,other->data,sizeof(int)*(this->totallength),cudaMemcpyDeviceToHost));
+		gpuErrchk(cudaMemcpy(this->dataOffset,other->dataOffset,sizeof(int)*(this->nodes+1),cudaMemcpyDeviceToHost));
+
+		this->key = NULL;
+		this->filter = NULL;
+		this->prefixArray = NULL;
+
+		return this;
+	}
+
 	~NeighbourGraph();
 };
 

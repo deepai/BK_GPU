@@ -32,13 +32,13 @@
 								<option id="nvcc.compiler.option.level.216673422" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="true" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.1582754906" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.1685868087" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
-								<option id="nvcc.compiler.include.paths.1326599842" name="Include paths (-I)" superClass="nvcc.compiler.include.paths" valueType="includePath"/>
+								<option id="nvcc.compiler.include.paths.1326599842" name="Include paths (-I)" superClass="nvcc.compiler.include.paths"/>
 								<inputType id="nvcc.compiler.input.cu.588000411" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1201784592" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.909679282" superClass="nvcc.compiler.input.c"/>
 							</tool>
 							<tool id="nvcc.linker.base.1581031104" name="NVCC Linker" superClass="nvcc.linker.base">
-								<option id="nvcc.linker.option.libs.1709991143" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs"/>
+								<option id="nvcc.linker.option.libs.1709991143" name="Libraries (-l)" superClass="nvcc.linker.option.libs"/>
 								<inputType id="nvcc.linker.input.338644391" superClass="nvcc.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>

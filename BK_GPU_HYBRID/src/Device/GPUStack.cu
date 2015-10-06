@@ -16,6 +16,7 @@ GPU_Stack::GPU_Stack(int size) {
 	gpuErrchk(cudaDeviceSynchronize());
 }
 
+
 GPU_Stack::~GPU_Stack() {
 	// TODO Auto-generated destructor stub
 }
