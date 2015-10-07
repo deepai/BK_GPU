@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util/util.h"
-#include "util/format.h"
+#include "util.h"
+#include "format.h"
 #include "mgpualloc.h"
 #include <cuda.h>
 
