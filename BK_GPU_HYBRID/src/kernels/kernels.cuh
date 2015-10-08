@@ -20,7 +20,7 @@ extern "C" int GpuPivotSelect(BK_GPU::NeighbourGraph &graph,
 
 extern "C"
 void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int **host,int currPSize);
+		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize);
 
 //extern "C" void GpuChoosePivotNeighbours(BK_GPU::NeighbourGraph &graph,
 	//	BK_GPU::GPU_Stack **stack, BK_GPU::GPU_CSR &InputGraph);

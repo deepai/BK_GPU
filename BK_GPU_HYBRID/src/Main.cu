@@ -7,6 +7,8 @@
 #include "Device/GPUCSR.h"
 #include "kernels/kernels.cuh"
 #include "Host/BKInstance.h"
+#include "moderngpu/moderngpu.cuh"
+#include "moderngpu/util/mgpucontext.h"
 #include <iostream>
 
 #include "cub/cub.cuh"
@@ -161,7 +163,7 @@ int main(int argc, char * argv[]) {
 
 	//GpuPivotSelect(*Ng, stack, *gpuGraph);
 
-	BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(gpuGraph,Ng,stack[0]);
+	BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[0]);
 
 	instance->RunCliqueFinder(0);
 
@@ -170,3 +172,4 @@ int main(int argc, char * argv[]) {
 
 	return 0;
 }
+
