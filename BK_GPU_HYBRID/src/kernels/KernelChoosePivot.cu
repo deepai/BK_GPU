@@ -165,7 +165,7 @@ extern "C" int GpuPivotSelect(BK_GPU::NeighbourGraph &graph,
 
 	Kernel_ChoosePivot<<<1, 96>>>(3, 32, 5, graph, stack, InputGraph);
 
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 
 	return 0;
 }

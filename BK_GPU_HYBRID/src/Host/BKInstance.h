@@ -32,7 +32,7 @@ public:
 
 	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack);
 	void RunCliqueFinder(int CliqueId);
-	void processP(BK_GPU::StackElement &element);
+	void processPivot(BK_GPU::StackElement &element);
 };
 
 } /* namespace BK_GPU */

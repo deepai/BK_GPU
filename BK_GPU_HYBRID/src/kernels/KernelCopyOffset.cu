@@ -15,12 +15,12 @@ void kernel_CopyAddress(BK_GPU::NeighbourGraph *graph,
 		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *dptr,int currPSize)
 {
 	int tid=threadIdx.x + blockIdx.x*blockDim.x;
-	if(tid < currPSize)
+	if(tid >= currPSize)
 		return;
 	else
 	{
 		int beginP=stack->topElement().beginP;
-		dptr[tid]=graph->data[beginP];
+		dptr[tid]=graph->data[beginP+tid];
 	}
 }
 
@@ -41,7 +41,7 @@ void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
 	gpuErrchk(cudaMalloc(&dptr,sizeof(unsigned int)*currPSize));
 
 	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128>>>(graph,stack,InputGraph,dptr,currPSize);
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 
 	//Copy back the values from the dptr to host memory
 	gpuErrchk(cudaMemcpy(host,dptr,sizeof(unsigned int )*currPSize,cudaMemcpyDeviceToHost));

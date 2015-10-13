@@ -13,7 +13,7 @@ GPU_Stack::GPU_Stack(int size) {
 	// TODO Auto-generated constructor stub
 	top = -1;
 	gpuErrchk(cudaMallocManaged(&elements, sizeof(StackElement) * size));
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 }
 
 
@@ -24,19 +24,19 @@ GPU_Stack::~GPU_Stack() {
 void *GPU_Stack::operator new(size_t len) {
 	void *ptr;
 	gpuErrchk(cudaMallocManaged(&ptr, sizeof(GPU_Stack) * len));
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 	return ptr;
 }
 
 void *GPU_Stack::operator new[](std::size_t count) {
 	void *ptr;
 	gpuErrchk(cudaMallocManaged(&ptr, sizeof(GPU_Stack*) * count))
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 	return ptr;
 }
 
 void GPU_Stack::operator delete(void *ptr) {
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 	gpuErrchk(cudaFree(ptr));
 }
 

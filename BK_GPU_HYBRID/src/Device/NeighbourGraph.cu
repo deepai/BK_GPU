@@ -29,18 +29,18 @@ NeighbourGraph::NeighbourGraph(int nodes, int neighbours) {
 	gpuErrchk(cudaMallocManaged(&data, sizeof(int) * (this->totallength)));
 	gpuErrchk(cudaMallocManaged(&filter, sizeof(bool) * (this->nodes)));
 
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 }
 
 void *NeighbourGraph::operator new(size_t len) {
 	void *ptr;
 	gpuErrchk(cudaMallocManaged(&ptr, len * sizeof(NeighbourGraph)));
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 	return ptr;
 }
 
 void NeighbourGraph::operator delete(void *ptr) {
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 	gpuErrchk(cudaFree(ptr));
 }
 
@@ -61,7 +61,7 @@ void NeighbourGraph::copy(int nodeindex, int offset, int *neighbours,
 	gpuErrchk(
 			cudaMemcpy(data + offset, neighbours, sizeof(int) * size,
 					cudaMemcpyHostToDevice));
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 
 	int temp = data[offset];
 	data[offset] = data[offset + size - 1];
@@ -72,7 +72,7 @@ void NeighbourGraph::copy(int nodeindex, int offset, int *neighbours,
 
 	//debug("Elements swapped are ",temp,data[offset]);
 
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 }
 template<typename InputIterator1, typename InputIterator2,
 		typename OutputIterator>
@@ -111,7 +111,7 @@ OutputIterator NeighbourGraph::expand(InputIterator1 first1,
 void NeighbourGraph::computeKeyArray(int cliqueSize, int totalSize) {
 	gpuErrchk(cudaMallocManaged(&key, sizeof(int) * totallength));
 	gpuErrchk(cudaMallocManaged(&prefixArray, sizeof(totallength)));
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 
 	//Make a copy of the dataOffset array
 	thrust::device_vector<int> offsets(dataOffset, dataOffset + nodes);
@@ -131,7 +131,7 @@ void NeighbourGraph::computeKeyArray(int cliqueSize, int totalSize) {
 
 	//printf("size=%d\n",tempkey.size());
 
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 
 	//Copy the values from tempKey to key array and clear the extra vectors
 	thrust::copy(tempkey.begin(), tempkey.end(), key);

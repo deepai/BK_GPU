@@ -22,7 +22,7 @@ GPU_CSR::GPU_CSR(Graph &graph) {
 			cudaMemcpy(this->rowOffsets, graph.rowOffset.data(),
 					sizeof(unsigned) * (this->Nodes + 1),
 					cudaMemcpyHostToDevice));
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 
 	gpuErrchk(cudaMallocManaged(&(this->Columns), sizeof(int) * (this->Edges)));
 
@@ -30,19 +30,19 @@ GPU_CSR::GPU_CSR(Graph &graph) {
 			cudaMemcpy(this->Columns, graph.columns.data(),
 					sizeof(unsigned) * (this->Edges), cudaMemcpyHostToDevice));
 
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 
 }
 
 void *GPU_CSR::operator new(size_t len) {
 	void *ptr;
 	gpuErrchk(cudaMallocManaged(&ptr, len * sizeof(BK_GPU::GPU_CSR)));
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 	return ptr;
 }
 
 void GPU_CSR::operator delete(void *ptr) {
-	gpuErrchk(cudaDeviceSynchronize());
+	DEV_SYNC;
 	gpuErrchk(cudaFree(ptr));
 }
 

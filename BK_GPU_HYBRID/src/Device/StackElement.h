@@ -44,6 +44,16 @@ public:
 		return *this;
 	}
 
+	__host__
+	void printconfig()
+	{
+		std::cout << "#############################################" << std::endl;
+		std::cout << "currPsize : " << currPSize << std::endl;
+		std::cout << "currRsize : " << currRSize << std::endl;
+		std::cout << "currXsize : " << currXSize << std::endl;
+		std::cout << "#############################################" << std::endl;
+	}
+
 };
 
 } /* namespace BK_GPU */

@@ -14,6 +14,8 @@
 #include <assert.h>
 #include <cuda_runtime.h>
 
+#define DEV_SYNC gpuErrchk(cudaDeviceSynchronize())
+
 //the following are UBUNTU/LINUX ONLY terminal color codes.
 #define RESET   "\033[0m"
 #define BLACK   "\033[30m"      /* Black */

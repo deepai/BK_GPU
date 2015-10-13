@@ -317,6 +317,9 @@ void Graph::calculateNeighbourArray() {
 		}
 	}
 
+	for(int i=0;i<neighbourArray.size();i++)
+		sort(neighbourArray[i].begin(),neighbourArray[i].end());
+
 	printf("Calculating neighbour done\n");
 
 //	for(int i=0;i<Nodes;i++)
