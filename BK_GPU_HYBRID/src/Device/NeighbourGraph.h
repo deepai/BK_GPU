@@ -27,21 +27,17 @@ public:
 	int totallength;
 	int *data;
 	int *dataOffset;
-	bool *filter;
-	int* key;
-	int* prefixArray;
 
 	void *operator new(size_t len);
 	void operator delete(void *ptr);
 
-	void copy(int nodeindex, int offset, int *neighbours, int size);
+	void copy(int nodeindex, int offset, int *neighbours, int Psize,int *rejectLists,int Rsize);
 
 	template<typename InputIterator1, typename InputIterator2,
 			typename OutputIterator>
 	OutputIterator expand(InputIterator1 first1, InputIterator1 last1,
 			InputIterator2 first2, OutputIterator output);
 
-	void computeKeyArray(int cliqueSize, int totalSize);
 
 	NeighbourGraph();
 	NeighbourGraph(int nodes, int neighbours);
@@ -57,10 +53,6 @@ public:
 
 		gpuErrchk(cudaMemcpy(this->data,other->data,sizeof(int)*(this->totallength),cudaMemcpyDeviceToHost));
 		gpuErrchk(cudaMemcpy(this->dataOffset,other->dataOffset,sizeof(int)*(this->nodes+1),cudaMemcpyDeviceToHost));
-
-		this->key = NULL;
-		this->filter = NULL;
-		this->prefixArray = NULL;
 
 		return this;
 	}

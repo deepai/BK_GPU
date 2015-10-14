@@ -10,6 +10,7 @@
 #include "moderngpu/moderngpu.cuh"
 #include "moderngpu/util/mgpucontext.h"
 #include <iostream>
+#include <algorithm>
 
 #include "cub/cub.cuh"
 
@@ -44,6 +45,18 @@ bool isBigEndian() {
 	else
 		return true;
 }
+
+struct listbyPsize
+{
+	int Psize;
+	int index;
+
+	bool operator < (const listbyPsize &rhs) const
+	{
+		return (Psize > rhs.Psize);
+	}
+
+};
 
 int main(int argc, char * argv[]) {
 	if (argc < 5) {
@@ -105,12 +118,14 @@ int main(int argc, char * argv[]) {
 	int countNodes = 0;
 
 	for (int i = g1->neighbourArray.size() - 1; i >= 0; i--) {
-		if (g1->KCoreValues[g1->neighbourArray[i][0]] == Core) {
-			if (g1->neighbourArray[i].size() < (Core + 1))
-				continue;
+
+		int lastindex = g1->neighbourArray[i].size()-1;
+
+		if (g1->KCoreValues[g1->neighbourArray[i][lastindex]] == Core) {
 			loc = i;
 			countNodes++;
 			totalSize += g1->neighbourArray[loc].size();
+			totalSize += g1->preDegeneracyVertices[loc].size();
 			//printf("%d \n",totalSize);
 		} else
 			break;
@@ -124,48 +139,53 @@ int main(int argc, char * argv[]) {
 	int offset = 0;
 
 	int nodeIndex = 0;
-
-	for (int i = loc; i < g1->neighbourArray.size(); i++) {
-		if (g1->neighbourArray[i].size() > Core) {
-			Ng->copy(nodeIndex++, offset, (int *) g1->neighbourArray[i].data(),
-					g1->neighbourArray[i].size());
-			offset += g1->neighbourArray[i].size();
-
-		}
-	}
-
-	int Cliquesize = Ng->cliqueSize;
-
-	Ng->computeKeyArray(Cliquesize, totalSize);
-
-	printf("Checking the Vertices\n");
+	int countofStack = countNodes;
 
 	BK_GPU::GPU_Stack **stack;
 
-	int countofStack = countNodes;
-	//=new BK_GPU::GPU_Stack*[2];
 	cudaMallocManaged(&stack, sizeof(BK_GPU::GPU_Stack*) * countofStack);
 
-//	cudaPointerAttributes attributes;
-//    gpuErrchk(cudaPointerGetAttributes (&attributes,stack));
-//    printf("Memory type for d_data %i\n",attributes.memoryType);
+	DEV_SYNC;
 
-	for (int i = 0; i < countofStack; i++)
-		stack[i] = new BK_GPU::GPU_Stack(Core + 1);
+	//Count of stack = Count Nodes which has Corenumber as Core
+	//
 
-	for (int i = 0; i < countofStack; i++) {
-		offset = Ng->dataOffset[i];
-		stack[i]->push(offset + 0, 0, offset + 0, Core, offset + Core, 1,
-				offset, 0, true);
+	DEV_SYNC;
+
+
+
+	std::vector<listbyPsize> L(countNodes);
+
+	for (int i = loc; i < g1->neighbourArray.size(); i++) {
+
+
+		int Psize = g1->neighbourArray[i].size();
+		int Rsize = g1->preDegeneracyVertices[i].size();
+
+		stack[nodeIndex] = new BK_GPU::GPU_Stack(Psize);
+
+		L[nodeIndex].Psize = Psize-1;
+		L[nodeIndex].index = nodeIndex;
+
+		Ng->copy(nodeIndex++, offset, (int *) g1->neighbourArray[i].data(),Psize,(int *)g1->preDegeneracyVertices[i].data(),Rsize);
+
+		stack[nodeIndex-1]->push(offset,Rsize ,offset + Rsize, Psize - 1 , offset + Rsize + Psize - 1, 1,
+						offset + Rsize, 0, true);
+
+		offset += (Psize + Rsize);
 	}
+
+	std::sort(L.begin(),L.end());
+
+	int Cliquesize = Ng->cliqueSize;
 
 	BK_GPU::GPU_CSR *gpuGraph = new BK_GPU::GPU_CSR(*g1);
 
 	//GpuPivotSelect(*Ng, stack, *gpuGraph);
 
-	BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[0]);
-
-	instance->RunCliqueFinder(0);
+//	BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[0]);
+//
+//	instance->RunCliqueFinder(0);
 
 	//debug("hello");
 	fclose(fp);

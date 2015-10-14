@@ -64,6 +64,7 @@ public:
 		elements[top].pivot_index = pivot_index;
 		elements[top].remainingNonNeighbour = remainingNonNeighbour;
 		elements[top].direction = direction;
+
 	}
 
 	/**

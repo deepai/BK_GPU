@@ -1,0 +1,18 @@
+{
+	"folders":
+	[
+		{
+			"path": "/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID"
+		}
+	],
+  "build_systems":
+    [
+        {
+            "name": "compile",
+            "shell_cmd": "cd ./Debug && make clean && make",
+            "working_dir":"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID"
+        }
+    ]
+}
+
+

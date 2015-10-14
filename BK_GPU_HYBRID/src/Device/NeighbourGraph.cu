@@ -27,7 +27,6 @@ NeighbourGraph::NeighbourGraph(int nodes, int neighbours) {
 
 	gpuErrchk(cudaMallocManaged(&dataOffset, sizeof(int) * (this->nodes + 1)));
 	gpuErrchk(cudaMallocManaged(&data, sizeof(int) * (this->totallength)));
-	gpuErrchk(cudaMallocManaged(&filter, sizeof(bool) * (this->nodes)));
 
 	DEV_SYNC;
 }
@@ -55,25 +54,24 @@ NeighbourGraph::~NeighbourGraph() {
  * @param neighbour //neighbour array containing the vertices which we shall copy.
  * @param size //size contains the length of the |1+P| vertices. The rowoffset shall be filled by this value.
  */
-void NeighbourGraph::copy(int nodeindex, int offset, int *neighbours,
-		int size) {
+void NeighbourGraph::copy(int nodeindex, int offset, int *neighbours, int Psize,int *rejectLists,int Rsize) {
 
 	gpuErrchk(
-			cudaMemcpy(data + offset, neighbours, sizeof(int) * size,
+			cudaMemcpy(data + offset, rejectLists, sizeof(int) * Rsize,
 					cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(data + offset + Rsize,neighbours,sizeof(int) * Psize,cudaMemcpyHostToDevice));
+
 	DEV_SYNC;
 
-	int temp = data[offset];
-	data[offset] = data[offset + size - 1];
-	data[offset + size - 1] = temp;
 
 	dataOffset[nodeindex] = offset;
-	dataOffset[nodeindex + 1] = offset + size;
+	dataOffset[nodeindex + 1] = offset + Psize + Rsize;
 
 	//debug("Elements swapped are ",temp,data[offset]);
 
 	DEV_SYNC;
 }
+
 template<typename InputIterator1, typename InputIterator2,
 		typename OutputIterator>
 OutputIterator NeighbourGraph::expand(InputIterator1 first1,
@@ -108,38 +106,6 @@ OutputIterator NeighbourGraph::expand(InputIterator1 first1,
 	return output;
 }
 
-void NeighbourGraph::computeKeyArray(int cliqueSize, int totalSize) {
-	gpuErrchk(cudaMallocManaged(&key, sizeof(int) * totallength));
-	gpuErrchk(cudaMallocManaged(&prefixArray, sizeof(totallength)));
-	DEV_SYNC;
 
-	//Make a copy of the dataOffset array
-	thrust::device_vector<int> offsets(dataOffset, dataOffset + nodes);
-
-	//This value contains the number of times each offset value would be expanded(CliqueSize)
-	thrust::device_vector<int> valuesToExpand(this->nodes);
-
-	//Initialize each value with CliqueSize
-	thrust::fill(valuesToExpand.begin(), valuesToExpand.end(), cliqueSize);
-
-	//temporary key array
-	thrust::device_vector<int> tempkey(totalSize);
-
-	//Invoke Expand to expand the keys
-	expand(valuesToExpand.begin(), valuesToExpand.end(), offsets.begin(),
-			tempkey.begin());
-
-	//printf("size=%d\n",tempkey.size());
-
-	DEV_SYNC;
-
-	//Copy the values from tempKey to key array and clear the extra vectors
-	thrust::copy(tempkey.begin(), tempkey.end(), key);
-
-	offsets.clear();
-	valuesToExpand.clear();
-	tempkey.clear();
-
-}
 
 } /* namespace BK_GPU */

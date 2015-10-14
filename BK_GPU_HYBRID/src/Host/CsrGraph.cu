@@ -13,6 +13,7 @@
 #include <set>
 #include <map>
 #include <cstdlib>
+#include <algorithm>
 
 template<class T> const T& max(const T& a, const T& b) {
 	return (a < b) ? b : a;     // or: return comp(a,b)?b:a; for version (2)
@@ -282,6 +283,7 @@ void Graph::sortEdgeLists() {
 void Graph::calculateNeighbourArray() {
 	printf("Edges after doubling = %u\n", Edges);
 	neighbourArray.resize(Nodes);
+	preDegeneracyVertices.resize(Nodes);
 
 	std::set<unsigned> visited;
 
@@ -313,25 +315,30 @@ void Graph::calculateNeighbourArray() {
 				if (degeneracyOrderDest > degeneracyOrderSrc) {
 					neighbourArray[degeneracyOrderSrc].push_back(dest);
 				}
+				else
+				{
+					preDegeneracyVertices[degeneracyOrderDest].push_back(dest);
+				}
 			}
 		}
 	}
 
 	for(int i=0;i<neighbourArray.size();i++)
-		sort(neighbourArray[i].begin(),neighbourArray[i].end());
+	{
+		int size=neighbourArray[i].size();
+
+		if(neighbourArray[i].size()>1)
+			std::swap(neighbourArray[i][0],neighbourArray[i][size-1]);
+
+		//Sort the array till the second last value. The second last value contains the initial Clique Vertex.
+		sort(neighbourArray[i].begin(),neighbourArray[i].begin()+size-1);
+
+		//Sort the Reject list values.
+		sort(preDegeneracyVertices.begin(),preDegeneracyVertices.end());
+	}
 
 	printf("Calculating neighbour done\n");
 
-//	for(int i=0;i<Nodes;i++)
-//	{
-//		printf("%3d",neighbourArray[i][0]+1);
-//	}
-//	printf("\n");
-//	for(int i=0;i<Nodes;i++)
-//	{
-//		printf("%3d",KCoreValues[neighbourArray[i][0]]);
-//	}
-//	printf("\n");
 
 }
 

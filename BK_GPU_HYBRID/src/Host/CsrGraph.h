@@ -103,6 +103,7 @@ public:
 	std::vector<unsigned> degeneracy;
 
 	std::vector<std::vector<unsigned> > neighbourArray;
+	std::vector<std::vector<unsigned> > preDegeneracyVertices;
 
 	Graph(int N, int E);
 	Graph();

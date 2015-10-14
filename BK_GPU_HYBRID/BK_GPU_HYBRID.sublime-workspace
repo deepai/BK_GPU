@@ -1,0 +1,949 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"as",
+				"assign(size_type __n, const bool &__x)	void "
+			],
+			[
+				"unorder",
+				"unordered_set"
+			],
+			[
+				"uno",
+				"unordered_map"
+			],
+			[
+				"unord",
+				"unordered_set"
+			],
+			[
+				"isd",
+				"isdiff2Used	bool "
+			],
+			[
+				"prin",
+				"print_f(int n)	void "
+			],
+			[
+				"bit",
+				"bits/"
+			],
+			[
+				"r",
+				"rleft	int "
+			],
+			[
+				"ad",
+				"append(size_type __n, char __c)	std::basic_string<char> & "
+			],
+			[
+				"bits",
+				"bits/"
+			],
+			[
+				"std",
+				"stdc++.h"
+			],
+			[
+				"prio",
+				"PRIo16	"
+			],
+			[
+				"vec",
+				"operator+(const valarray<typename _Dom::value_type> &__v, const _Expr<_Dom, typename _Dom::value_type> &__e)	_Expr<_BinClos<std::__plus, _ValArray, _Expr, typename _Dom::value_type, _Dom>, typename __fun<__plus, typename _Dom::value_type>::result_type> "
+			],
+			[
+				"firs",
+				"firstwidth"
+			],
+			[
+				"per",
+				"perm"
+			],
+			[
+				"fir",
+				"firstwidth"
+			],
+			[
+				"next",
+				"nextArr"
+			],
+			[
+				"nex",
+				"nextArr"
+			],
+			[
+				"ori",
+				"original"
+			],
+			[
+				"or",
+				"original"
+			],
+			[
+				"max",
+				"maxV"
+			],
+			[
+				"get",
+				"getcc"
+			],
+			[
+				"cont",
+				"concatenate"
+			],
+			[
+				"opp",
+				"opposed"
+			],
+			[
+				"In",
+				"Input"
+			],
+			[
+				"tem",
+				"temp2"
+			],
+			[
+				"cur",
+				"curr_B"
+			],
+			[
+				"va",
+				"val"
+			],
+			[
+				"cu",
+				"curr_B"
+			],
+			[
+				"val",
+				"val_B"
+			],
+			[
+				"curr",
+				"curr_B"
+			],
+			[
+				"curr_",
+				"curr_O"
+			],
+			[
+				"val_",
+				"val_O"
+			],
+			[
+				"pri",
+				"primes"
+			],
+			[
+				"pr",
+				"primes"
+			],
+			[
+				"first",
+				"firstelement"
+			],
+			[
+				"sus",
+				"subsetsums"
+			],
+			[
+				"ss",
+				"ssums"
+			],
+			[
+				"pow",
+				"powN"
+			],
+			[
+				"kern",
+				"kernels"
+			],
+			[
+				"data",
+				"dataOffset"
+			],
+			[
+				"loc",
+				"localCliqueId"
+			],
+			[
+				"lo",
+				"localCliqueId"
+			],
+			[
+				"adj",
+				"adjMatrix"
+			],
+			[
+				"dista",
+				"distance	(dijkstra.cpp)"
+			],
+			[
+				"f",
+				"found"
+			],
+			[
+				"count",
+				"countMinFreq"
+			],
+			[
+				"coun",
+				"countDivisor"
+			],
+			[
+				"COu",
+				"countMinFreq"
+			],
+			[
+				"cou",
+				"countMinFreq=N"
+			],
+			[
+				"iis",
+				"isPossible"
+			],
+			[
+				"to",
+				"totcount"
+			],
+			[
+				"Fa",
+				"FAST_IO"
+			],
+			[
+				"pos",
+				"position"
+			],
+			[
+				"up",
+				"upos"
+			],
+			[
+				"bsear",
+				"bsearchg"
+			],
+			[
+				"print",
+				"print_f"
+			],
+			[
+				"new",
+				"newNum"
+			],
+			[
+				"fx",
+				"fx[4][2"
+			],
+			[
+				"bo",
+				"bounds_4"
+			],
+			[
+				"temp",
+				"temp2"
+			],
+			[
+				"te",
+				"temp2"
+			],
+			[
+				"arr",
+				"arr2"
+			],
+			[
+				"Grap",
+				"GraphEdges"
+			],
+			[
+				"ed",
+				"Edges"
+			],
+			[
+				"graph",
+				"GraphEdges"
+			],
+			[
+				"M",
+				"MAXN"
+			],
+			[
+				"Ma",
+				"MAXN"
+			],
+			[
+				"co",
+				"count"
+			],
+			[
+				"Cliq",
+				"CliqueId"
+			],
+			[
+				"Cl",
+				"Cliques_size"
+			],
+			[
+				"thread",
+				"threadIdx"
+			],
+			[
+				"_",
+				"__syncthreads"
+			],
+			[
+				"current",
+				"currentVal"
+			],
+			[
+				"__",
+				"__syncthreads"
+			],
+			[
+				"tid",
+				"tid"
+			],
+			[
+				"is",
+				"isPVertexANeighbourOfCurrentVal"
+			],
+			[
+				"PVer",
+				"PVertex"
+			],
+			[
+				"Cli",
+				"CliqueId"
+			],
+			[
+				"adja",
+				"adjacentListPosOffset"
+			],
+			[
+				"curre",
+				"currentVal"
+			],
+			[
+				"neig",
+				"neighbours"
+			],
+			[
+				"Nei",
+				"neighbourIter"
+			],
+			[
+				"ne",
+				"neighbourIter"
+			],
+			[
+				"Inpu",
+				"InputGraph"
+			],
+			[
+				"GP",
+				"GPUCSR	(GPUCSR.h)"
+			],
+			[
+				"suf",
+				"suffixSort"
+			],
+			[
+				"Co",
+				"CountingArray"
+			],
+			[
+				"Max",
+				"MaxLg"
+			],
+			[
+				"update",
+				"updateVal"
+			],
+			[
+				"PVe",
+				"PVertexStartOffset"
+			],
+			[
+				"pVer",
+				"PVertexlength"
+			],
+			[
+				"pver",
+				"PVertexStartOffset"
+			],
+			[
+				"h",
+				"high"
+			],
+			[
+				"pus",
+				"push"
+			],
+			[
+				"end_t",
+				"end_time"
+			],
+			[
+				"star",
+				"start_time"
+			],
+			[
+				"range",
+				"range_x"
+			],
+			[
+				"nu",
+				"num_single_elements"
+			],
+			[
+				"rang",
+				"range_x"
+			],
+			[
+				"bsar",
+				"bsearchlast"
+			],
+			[
+				"start",
+				"start_time=g"
+			],
+			[
+				"ver",
+				"vertex_h"
+			],
+			[
+				"size",
+				"size"
+			],
+			[
+				"src",
+				"src_pair"
+			],
+			[
+				"sr",
+				"src_pair"
+			],
+			[
+				"out",
+				"outTime"
+			],
+			[
+				"F",
+				"FAST_IO"
+			],
+			[
+				"be",
+				"bellManFord"
+			],
+			[
+				"cyc",
+				"cycle_detected"
+			],
+			[
+				"pre",
+				"prebit"
+			],
+			[
+				"clo",
+				"clock"
+			],
+			[
+				"cloc",
+				"clock_t"
+			],
+			[
+				"DFS",
+				"DFS_Visit_normal"
+			],
+			[
+				"Df",
+				"DFS_Visit"
+			],
+			[
+				"dfs",
+				"DFS_Visit"
+			],
+			[
+				"fi",
+				"fillStack"
+			],
+			[
+				"tr",
+				"true"
+			],
+			[
+				"num",
+				"num_iterations"
+			],
+			[
+				"all",
+				"allZero"
+			],
+			[
+				"sec",
+				"secondAns"
+			],
+			[
+				"fu",
+				"fullRange"
+			],
+			[
+				"n",
+				"num"
+			],
+			[
+				"fa",
+				"FAST_IO"
+			],
+			[
+				"con",
+				"continue"
+			],
+			[
+				"c",
+				"curr_dest"
+			],
+			[
+				"xj",
+				"Xj"
+			],
+			[
+				"mi",
+				"min_"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/C++ Starting Kit/C++ - Starting Kit.sublime-build",
+					""
+				],
+				[
+					"Packages/C++ Starting Kit/C++ - Starting Kit.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/C++ Starting Kit/C++ - Starting Kit.sublime-build",
+				"Run"
+			]
+		],
+		[
+			[
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					""
+				],
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/C++/C++ Single File.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					""
+				],
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					"Run"
+				],
+				[
+					"Packages/C++11/C++11.sublime-build",
+					""
+				],
+				[
+					"Packages/C++11/C++11.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/C++/C++ Single File.sublime-build",
+				"Run"
+			]
+		],
+		[
+			[
+				[
+					"Packages/CUDA C++/cuda-c++.sublime-build",
+					""
+				],
+				[
+					"Packages/CUDA C++/cuda-c++.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/CUDA C++/cuda-c++.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/User/cpp11.sublime-build",
+					""
+				],
+				[
+					"Packages/User/cpp11.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/User/cpp11.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 354.0,
+		"last_filter": "Package Control: ",
+		"selected_items":
+		[
+			[
+				"Package Control: ",
+				"Package Control: Install Package"
+			],
+			[
+				"Snippet: ",
+				"Snippet: For Loop"
+			],
+			[
+				"prv",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"Snippet: c",
+				"Snippet: cpp"
+			],
+			[
+				"Package Control: In",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 431.0
+	},
+	"console":
+	{
+		"height": 139.0,
+		"history":
+		[
+			"import urllib.request,os,hashlib; h = 'eb2297e1a458f27d836c04bb0cbaf282' + 'd0e7a3098092775ccb37ca9d6b2e4b7d'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID"
+	],
+	"file_history":
+	[
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src/BK_GPU_HYBRID.sublime-project",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src/Main.cu",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/execute.sh",
+		"/home/debarshi/Documents/Thesis Work/work/Converter.cpp",
+		"/home/debarshi/.config/sublime-text-3/Packages/User/cpp11.sublime-build",
+		"/home/debarshi/Documents/Programming/HackerRank/temp.cpp",
+		"/home/debarshi/Documents/Programming/HackerRank/Rust_Murder.cpp",
+		"/home/debarshi/Documents/Programming/HackerRank/QuickSort",
+		"/home/debarshi/cuda-workspace/BK_GPU/src/Device/StackElement.h",
+		"/home/debarshi/cuda-workspace/BK_GPU/src/Device/NeighbourGraph.cu",
+		"/home/debarshi/Documents/Programming/LeetCode/output",
+		"/home/debarshi/Documents/Programming/LeetCode/output.txt",
+		"/home/debarshi/Documents/Programming/Codeforces/322/A.cpp",
+		"/home/debarshi/Documents/Programming/Codeforces/322/E.cpp",
+		"/home/debarshi/.config/sublime-text-3/Packages/User/Preferences.sublime-settings",
+		"/home/debarshi/.config/sublime-text-3/Packages/User/cpp.sublime-snippet",
+		"/home/debarshi/.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap",
+		"/home/debarshi/.config/sublime-text-3/Packages/Default/Default (Linux).sublime-keymap",
+		"/home/debarshi/Documents/Programming/Codeforces/322/B.cpp",
+		"/home/debarshi/Documents/Programming/Codeforces/322/C.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/apac/A.cpp",
+		"/home/debarshi/Documents/Programming/Codeforces/322/D.cpp",
+		"/home/debarshi/.config/sublime-text-3/Packages/Clang Format/clang_format.sublime-settings",
+		"/home/debarshi/.config/sublime-text-3/Packages/Default/Preferences.sublime-settings",
+		"/home/debarshi/.config/sublime-text-3/Packages/C++/std-map-(map).sublime-snippet",
+		"/home/debarshi/Documents/Programming/Codeforces/parse.py",
+		"/home/debarshi/Documents/Programming/Codejam/2011/Bot_Trust.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/2011/MagicKa.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/2010/B.java",
+		"/home/debarshi/Documents/Programming/Topcoder/ANUMLA.cpp",
+		"/home/debarshi/cuda-workspace/BK_GPU/src/kernels/kernels.cuh",
+		"/home/debarshi/cuda-workspace/BK_GPU/Debug/makefile",
+		"/home/debarshi/cuda-workspace/BK_GPU/src/Main.cu",
+		"/usr/include/c++/4.8/bits/stl_algo.h",
+		"/home/debarshi/Documents/Programming/Apac/codejam.h",
+		"/home/debarshi/Documents/Programming/Codejam/apac/C.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/String/Edit_distance.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/String/Suffix_array_emaxx.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/String/Distinct_Substrings.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/String/Input.txt",
+		"/home/debarshi/Documents/Programming/Codebook/String/Minimum_LexicographicRotation.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/String/Suffix_array.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/Radix_Sort_Pair.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/Topological_Sorting.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/QuickSort.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/Sort/QuickSort.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/Sort/cpp",
+		"/home/debarshi/Documents/Programming/Codebook/Maths/Scpp",
+		"/home/debarshi/Documents/Programming/Codeforces/570/Bellman_Ford",
+		"/home/debarshi/Documents/Programming/Codechef/Septemeber Long/sample_Case.cpp",
+		"/home/debarshi/Documents/Programming/Codechef/Septemeber Long/sample_Case.txt",
+		"/home/debarshi/Documents/Thesis Work/work/bcc_decomposition/bcc_decomposition.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/connected_components.cpp",
+		"/home/debarshi/Documents/Thesis Work/work/quick-cliques/converter.cpp",
+		"/home/debarshi/Documents/Thesis Work/work/quick-cliques/src/degeneracy_algorithm.c",
+		"/home/debarshi/Documents/Programming/Codebook/Graphs/ford_fulkersion.cpp",
+		"/home/debarshi/Documents/Programming/Codebook/Graphs/dijkstra",
+		"/home/debarshi/Documents/Programming/Codebook/Graphs/dijkstra.cpp",
+		"/home/debarshi/Documents/Programming/Apac/NumDiv.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/A.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/metro.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/Calculator.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/Tetris.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/D.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/B.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/A-small-1.out",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/C.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/A-small-1-attempt1.in",
+		"/home/debarshi/Documents/Programming/Codejam/Codejam_Practise/b.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/A.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Chess",
+		"/home/debarshi/Documents/Programming/Codejam/practise2.cpp",
+		"/home/debarshi/.config/sublime-text-3/Packages/User/clang_format.sublime-settings",
+		"/home/debarshi/.config/sublime-text-3/Packages/User/CppBuilder.sublime-settings",
+		"/home/debarshi/Documents/Programming/Codejam/A-small-practice.in",
+		"/home/debarshi/Documents/Programming/Codejam/A-small.out",
+		"/home/debarshi/Documents/Programming/Codejam/401_palindromes.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Chess.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/practise.cpp",
+		"/home/debarshi/Documents/Programming/Codejam/Minesweeper.cpp"
+	],
+	"find":
+	{
+		"height": 30.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"12983",
+			"26853",
+			"12983",
+			"26853",
+			"cout",
+			"gc",
+			" ()",
+			"gc",
+			"distance",
+			"parent",
+			"t",
+			"child",
+			"a",
+			"t = a[low]; a[low] = a[j]; a[j] = t;",
+			"a",
+			"inBound"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"dist",
+			"distance",
+			"A",
+			"Bounds"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 30.0
+	},
+	"input":
+	{
+		"height": 33.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.clangcomplete":
+	{
+		"height": 168.0
+	},
+	"output.exec":
+	{
+		"height": 168.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.sftp":
+	{
+		"height": 102.0
+	},
+	"pinned_build_system": "Packages/User/cpp11.sublime-build",
+	"project": "BK_GPU_HYBRID.sublime-project",
+	"replace":
+	{
+		"height": 56.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"dijks",
+				"Graphs/dijkstra"
+			],
+			[
+				"d",
+				"D.cpp"
+			],
+			[
+				"c",
+				"C.cpp"
+			],
+			[
+				"a",
+				"A.cpp"
+			],
+			[
+				"b",
+				"B.cpp"
+			],
+			[
+				"chess",
+				"Chess"
+			],
+			[
+				"a-small",
+				"A-small.out"
+			],
+			[
+				"a-",
+				"A-small.out"
+			],
+			[
+				"a-sm",
+				"A-small.out"
+			],
+			[
+				"a-sma",
+				"A-small-practice.in"
+			],
+			[
+				"ches",
+				"Chess.cpp"
+			],
+			[
+				"practise.cpp",
+				"practise.cpp"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 240.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 378.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 216.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

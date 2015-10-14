@@ -99,21 +99,7 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
 				adata, acount, bdata, adjacencySize, dptr, dptr, *Context,
 				&currNeighbour, &non_neighbours);
-		/**.................................**/
-//		//Print Info
-//		debug("START_INFO");
-//		debug("currP =",currP);
-//		for(int j=0;j<currP;j++)
-//			debug(hptr[j]);
-//		debug("currVal:",hptr[i]);
-//		debug("NeighboursSize:",adjacencySize);
-//		for(int j=0;j<adjacencySize;j++)
-//			debug(bdata[j]);
-//		debug("Results");
-//		for(int j=0;j<currP;j++)
-//			debug(dptr[j]);
-//		debug("END_INFO")
-		/**.................................**/
+
 
 		if (currNeighbour > numNeighbours) {
 			max_index = i;
