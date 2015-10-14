@@ -9,7 +9,7 @@
     [
         {
             "name": "compile",
-            "shell_cmd": "cd ./Debug && make clean && make",
+            "shell_cmd": "make -C Debug/ clean && make -C Debug/ all",
             "working_dir":"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID"
         }
     ]

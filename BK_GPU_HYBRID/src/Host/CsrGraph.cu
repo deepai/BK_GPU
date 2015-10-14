@@ -317,8 +317,12 @@ void Graph::calculateNeighbourArray() {
 				}
 				else
 				{
-					preDegeneracyVertices[degeneracyOrderDest].push_back(dest);
+					preDegeneracyVertices[degeneracyOrderSrc].push_back(dest);
 				}
+			}
+			else
+			{
+				preDegeneracyVertices[degeneracyOrderSrc].push_back(dest);
 			}
 		}
 	}

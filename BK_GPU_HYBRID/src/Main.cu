@@ -152,16 +152,19 @@ int main(int argc, char * argv[]) {
 
 	DEV_SYNC;
 
-
-
+/**
+This L array is used to first sort the neighbour array values by Psize
+**/
 	std::vector<listbyPsize> L(countNodes);
 
 	for (int i = loc; i < g1->neighbourArray.size(); i++) {
 
-
+//Calculate Psize
 		int Psize = g1->neighbourArray[i].size();
+//Calculate Rsize
 		int Rsize = g1->preDegeneracyVertices[i].size();
 
+//Stack Node
 		stack[nodeIndex] = new BK_GPU::GPU_Stack(Psize);
 
 		L[nodeIndex].Psize = Psize-1;
@@ -175,16 +178,26 @@ int main(int argc, char * argv[]) {
 		offset += (Psize + Rsize);
 	}
 
+//Sort the graph by currP size
 	std::sort(L.begin(),L.end());
 
 	int Cliquesize = Ng->cliqueSize;
 
+	//Copy the Input graph in CSR format to the GPU
 	BK_GPU::GPU_CSR *gpuGraph = new BK_GPU::GPU_CSR(*g1);
 
-	//GpuPivotSelect(*Ng, stack, *gpuGraph);
+	for(int i=0;i<countNodes;i++)
+	{
+		int idx = L[i].index;
+		std::cout <<"Psize is :" << L[i].Psize << std::endl;
+		for(int j=Ng->dataOffset[idx];j<Ng->dataOffset[idx+1];j++)
+			std::cout <<  Ng->data[j] << " ";
+		std::cout << std::endl;
+	}
 
 //	BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[0]);
-//
+//	clear
+
 //	instance->RunCliqueFinder(0);
 
 	//debug("hello");
