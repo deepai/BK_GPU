@@ -12,7 +12,7 @@
  * @param stack //input stack
  */
 __global__
-void kernelRearrangeGather(uint *darray,uint *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
+void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
 {
 	int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -57,7 +57,7 @@ void kernelRearrangeGather(uint *darray,uint *d_temp,int start_offset,int end_of
  * @param graph //graph
  */
 __global__
-void KernelRearrangeScatter(uint *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
+void KernelRearrangeScatterP(uint *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
 {
 	int tid = threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -78,11 +78,11 @@ void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
 
 	gpuErrchk(cudaMalloc(&d_temp,sizeof(uint)*numElements));
 
-	kernelRearrangeGather<<<ceil((double)numElements/128),128>>>(darray,d_temp,start_offset,end_offset,graph,stack);
+	kernelRearrangeGatherP<<<ceil((double)numElements/128),128>>>(darray,d_temp,start_offset,end_offset,graph,stack);
 
 	DEV_SYNC;
 
-	KernelRearrangeScatter<<<ceil((double)numElements/128),128>>>(d_temp,start_offset,end_offset,graph);
+	KernelRearrangeScatterP<<<ceil((double)numElements/128),128>>>(d_temp,start_offset,end_offset,graph);
 
 	DEV_SYNC;
 
