@@ -157,7 +157,7 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 				cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
 						d_unSorted, d_Sorted, currX));
 
-		int adata = d_Sorted;
+		adata = d_Sorted;
 		int acount = topElement.currXSize;
 
 		int NeighboursinX, nonNeighboursinX;
@@ -170,10 +170,6 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 		//Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
 		thrust::inclusive_scan(dptr, dptr + currX + 1, dptr);
-
-		//Rearrange the currX array
-		GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, dptr,
-				topElement.beginX, topElement.beginX + currX);
 
 		topElement.currXSize = NeighboursinX;
 	}
