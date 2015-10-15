@@ -69,7 +69,7 @@ void KernelRearrangeScatter(uint *d_temp,int start_offset,int end_offset,BK_GPU:
 
 
 extern "C"
-void GpuArrayRearrange(BK_GPU::NeighbourGraph *graph,
+void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
 		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset)
 {
 	int numElements = end_offset - start_offset + 1;

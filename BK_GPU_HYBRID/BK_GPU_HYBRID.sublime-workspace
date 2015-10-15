@@ -4,6 +4,22 @@
 		"selected_items":
 		[
 			[
+				"curr",
+				"currX"
+			],
+			[
+				"currX",
+				"currXSize"
+			],
+			[
+				"nei",
+				"NeighbourGraph"
+			],
+			[
+				"co",
+				"countNodes"
+			],
+			[
 				"as",
 				"assign(size_type __n, const bool &__x)	void "
 			],
@@ -122,10 +138,6 @@
 			[
 				"val",
 				"val_B"
-			],
-			[
-				"curr",
-				"curr_B"
 			],
 			[
 				"curr_",
@@ -274,10 +286,6 @@
 			[
 				"Ma",
 				"MAXN"
-			],
-			[
-				"co",
-				"count"
 			],
 			[
 				"Cliq",
@@ -506,19 +514,19 @@
 			[
 				"c",
 				"curr_dest"
-			],
-			[
-				"xj",
-				"Xj"
-			],
-			[
-				"mi",
-				"min_"
 			]
 		]
 	},
 	"buffers":
 	[
+		{
+			"file": "src/Host/BKInstance.cu",
+			"settings":
+			{
+				"buffer_size": 6848,
+				"line_ending": "Unix"
+			}
+		}
 	],
 	"build_system": "",
 	"build_system_choices":
@@ -661,12 +669,22 @@
 	},
 	"expanded_folders":
 	[
-		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID"
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/src",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/src/Host",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src/Host"
 	],
 	"file_history":
 	[
-		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src/BK_GPU_HYBRID.sublime-project",
 		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src/Main.cu",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/BK_GPU_HYBRID.sublime-project",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src/Host/CsrGraph.cu",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/src/Device/GPUStack.d",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/makefile",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/src/Device/subdir.mk",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/src/subdir.mk",
+		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/src/BK_GPU_HYBRID.sublime-project",
 		"/home/debarshi/git/BK_GPU_HYBRID/BK_GPU_HYBRID/Debug/execute.sh",
 		"/home/debarshi/Documents/Thesis Work/work/Converter.cpp",
 		"/home/debarshi/.config/sublime-text-3/Packages/User/cpp11.sublime-build",
@@ -799,8 +817,41 @@
 	"groups":
 	[
 		{
+			"selected": 0,
 			"sheets":
 			[
+				{
+					"buffer": 0,
+					"file": "src/Host/BKInstance.cu",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6848,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1956,
+								1956
+							]
+						],
+						"settings":
+						{
+							"incomplete_sync": null,
+							"remote_loading": false,
+							"synced": false,
+							"syntax": "Packages/CUDA C++/cuda-c++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1380.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
 			]
 		}
 	],
@@ -841,7 +892,7 @@
 	},
 	"output.exec":
 	{
-		"height": 168.0
+		"height": 116.0
 	},
 	"output.find_results":
 	{
@@ -851,7 +902,7 @@
 	{
 		"height": 102.0
 	},
-	"pinned_build_system": "Packages/User/cpp11.sublime-build",
+	"pinned_build_system": "compile",
 	"project": "BK_GPU_HYBRID.sublime-project",
 	"replace":
 	{

@@ -31,13 +31,14 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 	/**Step 1: Find the pivot element
 	 */
 	int currP = topElement.currPSize; //Size of Number of Elements in P
+	int currX = topElement.currXSize;
 	unsigned int *d_Sorted; //This is used to store the Unsorted elements initially
 
 	void *d_temp_storage = NULL; //Auxillary array required for temporary Storage
 	size_t d_temp_size = sizeof(unsigned) * currP * 2; //size of auxillary array is 2*N
 
 	//Allocate Auxillary Array
-	gpuErrchk(cudaMallocManaged(&d_temp_storage, d_temp_size));
+	gpuErrchk(cudaMallocManaged(&d_temp_storage, sizeof(unsigned)* 2 * (currP + currX)));
 
 	//Point to the unsorted input data
 	unsigned int *d_unSorted = (unsigned *) &(Ng->data[topElement.beginP]);
@@ -45,15 +46,6 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 	DEV_SYNC
 	;
-//
-//	//This step does the actual sorting.
-//	gpuErrchk(
-//			cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
-//					d_unSorted, d_Sorted, currP));
-//
-//	DEV_SYNC
-//	;
-
 	//Store the Node Value for each value in the currPArray
 	unsigned int *hptr = new unsigned[currP];
 
@@ -64,7 +56,7 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 	unsigned int* dptr;
 
 	//size currP to allow prefixSums
-	gpuErrchk(cudaMallocManaged(&dptr, sizeof(uint) * (currP)));
+	gpuErrchk(cudaMallocManaged(&dptr, sizeof(uint) * 2 *(currP + currX)));
 
 	DEV_SYNC
 	;
@@ -146,23 +138,15 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 	//call Kernel Here to re-arrange P elements
 
-	GpuArrayRearrange(this->Ng, this->stack, this->gpuGraph, dptr,
+	GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, dptr,
 			topElement.beginP, topElement.beginP + newPsize);
 
 	//Repeat the steps for currX.
-
-	int currX = topElement.currXSize;
-	d_temp_size = 2 * currX * sizeof(uint);
-
 	//Intersection with X
 
-	if (currX != 0) {
-		gpuErrchk(cudaFree(dptr));
-		gpuErrchk((cudaFree(d_temp_storage)));
-
-		//allocate memory for currXSize
-		gpuErrchk(cudaMallocManaged(&dptr, sizeof(uint) * (currX + 1)));
-		gpuErrchk(cudaMallocManaged(&d_temp_storage, d_temp_size));
+	if (currX != 0) 
+	{
+			d_temp_size = 2 * currX * sizeof(uint);
 
 		//Pointer to the CurrX Values
 		d_unSorted = (unsigned *) &(Ng->data[topElement.beginX]);
@@ -173,6 +157,7 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 				cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
 						d_unSorted, d_Sorted, currX));
 
+		int adata = d_Sorted;
 		int acount = topElement.currXSize;
 
 		int NeighboursinX, nonNeighboursinX;
@@ -187,7 +172,7 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 		thrust::inclusive_scan(dptr, dptr + currX + 1, dptr);
 
 		//Rearrange the currX array
-		GpuArrayRearrange(this->Ng, this->stack, this->gpuGraph, dptr,
+		GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, dptr,
 				topElement.beginX, topElement.beginX + currX);
 
 		topElement.currXSize = NeighboursinX;
