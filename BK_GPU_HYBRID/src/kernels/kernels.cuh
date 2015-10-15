@@ -24,7 +24,11 @@ void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
 
 extern "C"
 void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset);
+		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countZeroes);
+
+extern "C"
+void GpuArrayRearrangeX(BK_GPU::NeighbourGraph *graph,
+    BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countOnes);
 
 extern "C"
 void GpuArraySwap(BK_GPU::NeighbourGraph *Graph,BK_GPU::GPU_Stack* stack,int swapstart,int swapend);

@@ -139,7 +139,7 @@ void BKInstance::processPivot(BK_GPU::StackElement &element) {
 	//call Kernel Here to re-arrange P elements
 
 	GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, dptr,
-			topElement.beginP, topElement.beginP + newPsize);
+			topElement.beginP, topElement.beginP + newPsize,non_neighbours);
 
 	//Repeat the steps for currX.
 	//Intersection with X

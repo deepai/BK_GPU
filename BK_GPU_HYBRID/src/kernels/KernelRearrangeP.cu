@@ -12,7 +12,7 @@
  * @param stack //input stack
  */
 __global__
-void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
+void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_offset,int countZeroes,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
 {
 	int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -23,8 +23,8 @@ void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_o
 	//get the current prefixsum value
 	uint currVal=darray[tid+start_offset];
 
-	//get the next prefixsum value
-	uint nextVal=darray[tid+start_offset+1];
+	//get the previous prefixSum value
+  uint prevVal=(tid==0)?0:darray[tid+start_offset-1];
 
 	int destination; //store destination here
 
@@ -35,15 +35,15 @@ void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_o
 	 * indicates number of 0s preceding it.
 	 */
 
-	if(nextVal - currVal == 1)
-		destination = start_offset + currVal - 1;
+	if(currVal - prevVal == 1)
+		destination = currVal - 1;
 	else
-		destination = end_offset - ( currVal - (tid + start_offset ));
+		destination = end_offset - (countZeroes - currVal - 1) - start_offset;
 
 	//Copy the current Element before swapping
 	int currElement=graph->data[tid+start_offset];
 
-	d_temp[destination - start_offset] = currElement;
+	d_temp[destination] = currElement;
 
 }
 
@@ -70,7 +70,7 @@ void KernelRearrangeScatterP(uint *d_temp,int start_offset,int end_offset,BK_GPU
 
 extern "C"
 void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset)
+		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countZeroes)
 {
 	int numElements = end_offset - start_offset + 1;
 
@@ -78,7 +78,7 @@ void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
 
 	gpuErrchk(cudaMalloc(&d_temp,sizeof(uint)*numElements));
 
-	kernelRearrangeGatherP<<<ceil((double)numElements/128),128>>>(darray,d_temp,start_offset,end_offset,graph,stack);
+	kernelRearrangeGatherP<<<ceil((double)numElements/128),128>>>(darray,d_temp,start_offset,end_offset,countZeroes,graph,stack);
 
 	DEV_SYNC;
 
