@@ -12,7 +12,7 @@
  * @param stack //input stack
  */
 __global__
-void kernelRearrangeGatherX(uint *darray,uint *d_temp,int start_offset,int end_offset,int countOnes,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
+void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,int end_offset,int countOnes,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
 {
   int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -21,10 +21,10 @@ void kernelRearrangeGatherX(uint *darray,uint *d_temp,int start_offset,int end_o
     return;
 
   //get the current prefixsum value
-  uint currVal=darray[tid+start_offset];
+  int currVal=darray[tid];
 
   //get the next prefixsum value
-  uint prevVal=(tid==0)?0:darray[tid+start_offset-1];
+  int prevVal=(tid==0)?0:darray[tid-1];
 
   int destination; //store destination here
 
@@ -50,7 +50,7 @@ void kernelRearrangeGatherX(uint *darray,uint *d_temp,int start_offset,int end_o
  * @param graph //graph
  */
 __global__
-void KernelRearrangeScatterX(uint *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
+void KernelRearrangeScatterX(int *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
 {
   int tid = threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -62,19 +62,19 @@ void KernelRearrangeScatterX(uint *d_temp,int start_offset,int end_offset,BK_GPU
 
 extern "C"
 void GpuArrayRearrangeX(BK_GPU::NeighbourGraph *graph,
-    BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countOnes)
+    BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream)
 {
   int numElements = end_offset - start_offset + 1;
 
-  uint* d_temp;
+  int* d_temp;
 
-  gpuErrchk(cudaMalloc(&d_temp,sizeof(uint)*numElements));
+  gpuErrchk(cudaMalloc(&d_temp,sizeof(int)*numElements));
 
-  kernelRearrangeGatherX<<<ceil((double)numElements/128),128>>>(darray,d_temp,start_offset,end_offset,countOnes,graph,stack);
+  kernelRearrangeGatherX<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countOnes,graph,stack);
 
   DEV_SYNC;
 
-  KernelRearrangeScatterX<<<ceil((double)numElements/128),128>>>(d_temp,start_offset,end_offset,graph);
+  KernelRearrangeScatterX<<<ceil((double)numElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph);
 
   DEV_SYNC;
 

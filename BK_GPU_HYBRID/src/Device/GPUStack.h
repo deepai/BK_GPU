@@ -50,7 +50,7 @@ public:
 	 */
 	__host__ __device__
 	void push(int beginX, int currXSize, int beginP, int currPSize, int beginR,
-			int currRSize, int pivot_index, int remainingNonNeighbour,
+			int currRSize, int pivot_index,int stackSize, int remainingNonNeighbour,
 			bool direction) //true indicates forward and false indicates backward)
 			{
 		++top;
@@ -61,9 +61,10 @@ public:
 		elements[top].currPSize = currPSize;
 		elements[top].beginR = beginR;
 		elements[top].currRSize = currRSize;
-		elements[top].pivot_index = pivot_index;
+		elements[top].pivot = pivot_index;
 		elements[top].remainingNonNeighbour = remainingNonNeighbour;
 		elements[top].direction = direction;
+		elements[top].trackerSize = stackSize;
 
 	}
 

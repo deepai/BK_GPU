@@ -35,12 +35,12 @@ void kernel_CopyAddress(BK_GPU::NeighbourGraph *graph,
  * @param currPSize currPSize
  */
 void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize)
+		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream)
 {
 	unsigned int *dptr;
 	gpuErrchk(cudaMalloc(&dptr,sizeof(unsigned int)*currPSize));
 
-	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128>>>(graph,stack,InputGraph,dptr,currPSize);
+	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128,0,stream>>>(graph,stack,InputGraph,dptr,currPSize);
 	DEV_SYNC;
 
 	//Copy back the values from the dptr to host memory

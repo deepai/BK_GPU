@@ -15,23 +15,21 @@
 
 #define tos(stack,i) (stack[i]->topElement())
 
-extern "C" int GpuPivotSelect(BK_GPU::NeighbourGraph &graph,
-		BK_GPU::GPU_Stack **stack, BK_GPU::GPU_CSR &InputGraph);
 
 extern "C"
 void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize);
+		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream);
 
 extern "C"
 void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countZeroes);
+		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countZeroes,cudaStream_t &stream);
 
 extern "C"
 void GpuArrayRearrangeX(BK_GPU::NeighbourGraph *graph,
-    BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countOnes);
+    BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream);
 
 extern "C"
-void GpuArraySwap(BK_GPU::NeighbourGraph *Graph,BK_GPU::GPU_Stack* stack,int swapstart,int swapend);
+void GpuSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend);
 //extern "C" void GpuChoosePivotNeighbours(BK_GPU::NeighbourGraph &graph,
 	//	BK_GPU::GPU_Stack **stack, BK_GPU::GPU_CSR &InputGraph);
 

@@ -12,7 +12,7 @@
  * @param stack //input stack
  */
 __global__
-void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_offset,int countZeroes,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
+void kernelRearrangeGatherP(unsigned int *darray,int *d_temp,int start_offset,int end_offset,int countZeroes,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
 {
 	int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -21,10 +21,10 @@ void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_o
 		return;
 
 	//get the current prefixsum value
-	uint currVal=darray[tid+start_offset];
+	int currVal=darray[tid];
 
 	//get the previous prefixSum value
-  uint prevVal=(tid==0)?0:darray[tid+start_offset-1];
+    int prevVal=(tid==0)?0:darray[tid-1];
 
 	int destination; //store destination here
 
@@ -38,7 +38,7 @@ void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_o
 	if(currVal - prevVal == 1)
 		destination = currVal - 1;
 	else
-		destination = end_offset - (countZeroes - currVal - 1) - start_offset;
+		destination = end_offset - (countZeroes - (tid+1 - currVal)) - start_offset;
 
 	//Copy the current Element before swapping
 	int currElement=graph->data[tid+start_offset];
@@ -57,7 +57,7 @@ void kernelRearrangeGatherP(uint *darray,uint *d_temp,int start_offset,int end_o
  * @param graph //graph
  */
 __global__
-void KernelRearrangeScatterP(uint *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
+void KernelRearrangeScatterP(int *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
 {
 	int tid = threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -70,19 +70,19 @@ void KernelRearrangeScatterP(uint *d_temp,int start_offset,int end_offset,BK_GPU
 
 extern "C"
 void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countZeroes)
+		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countZeroes,cudaStream_t &stream)
 {
 	int numElements = end_offset - start_offset + 1;
 
-	uint* d_temp;
+	int* d_temp;
 
-	gpuErrchk(cudaMalloc(&d_temp,sizeof(uint)*numElements));
+	gpuErrchk(cudaMalloc(&d_temp,sizeof(int)*numElements));
 
-	kernelRearrangeGatherP<<<ceil((double)numElements/128),128>>>(darray,d_temp,start_offset,end_offset,countZeroes,graph,stack);
+	kernelRearrangeGatherP<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countZeroes,graph,stack);
 
 	DEV_SYNC;
 
-	KernelRearrangeScatterP<<<ceil((double)numElements/128),128>>>(d_temp,start_offset,end_offset,graph);
+	KernelRearrangeScatterP<<<ceil((double)numElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph);
 
 	DEV_SYNC;
 

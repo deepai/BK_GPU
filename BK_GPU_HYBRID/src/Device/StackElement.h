@@ -21,8 +21,9 @@ public:
 	int currPSize;
 	int beginR;
 	int currRSize;
+	int trackerSize;
 
-	int pivot_index;
+	int pivot;
 	int remainingNonNeighbour;
 	bool direction; //true indicates forward and false indicates backward
 
@@ -39,7 +40,8 @@ public:
 		this->currRSize = element.currRSize;
 		this->currXSize = element.currXSize;
 		this->direction = element.direction;
-		this->pivot_index = element.pivot_index;
+		this->pivot = element.pivot;
+		this->trackerSize = element.trackerSize;
 		this->remainingNonNeighbour = element.remainingNonNeighbour;
 		return *this;
 	}

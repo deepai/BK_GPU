@@ -11,6 +11,7 @@
 #include "moderngpu/util/mgpucontext.h"
 #include <iostream>
 #include <algorithm>
+#include "omp.h"
 
 #include "cub/cub.cuh"
 
@@ -173,7 +174,7 @@ This L array is used to first sort the neighbour array values by Psize
 		Ng->copy(nodeIndex++, offset, (int *) g1->neighbourArray[i].data(),Psize,(int *)g1->preDegeneracyVertices[i].data(),Rsize);
 
 		stack[nodeIndex-1]->push(offset,Rsize ,offset + Rsize, Psize - 1 , offset + Rsize + Psize - 1, 1,
-						offset + Rsize, 0, true);
+						offset + Rsize,0, 0, true);
 
 		offset += (Psize + Rsize);
 	}
@@ -186,19 +187,36 @@ This L array is used to first sort the neighbour array values by Psize
 	//Copy the Input graph in CSR format to the GPU
 	BK_GPU::GPU_CSR *gpuGraph = new BK_GPU::GPU_CSR(*g1);
 
-	for(int i=0;i<countNodes;i++)
+//	for(int i=0;i<countNodes;i++)
+//	{
+//		int idx = L[i].index;
+//		std::cout <<"Psize is :" << L[i].Psize << std::endl;
+//		for(int j=Ng->dataOffset[idx];j<Ng->dataOffset[idx+1];j++)
+//			std::cout <<  Ng->data[j] + 1 << " ";
+//		std::cout << std::endl;
+//	}
+
+	cudaStream_t stream[0];
+
+	cudaStreamCreate(&stream[0]);
+
+
+	omp_set_num_threads(L.size());
+
+//#pragma omp parallel for
+	for(int i=0;i<L.size();i++)
 	{
-		int idx = L[i].index;
-		std::cout <<"Psize is :" << L[i].Psize << std::endl;
-		for(int j=Ng->dataOffset[idx];j<Ng->dataOffset[idx+1];j++)
-			std::cout <<  Ng->data[j] << " ";
-		std::cout << std::endl;
+		//cudaStreamCreate(&stream[i]);
+		BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[0]);
+		//	clear
+		instance->RunCliqueFinder(i);
+
+		instance = NULL;
+		//cudaStreamDestroy(stream[i]);
 	}
 
-//	BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[0]);
-//	clear
+	cudaStreamDestroy(stream[0]);
 
-//	instance->RunCliqueFinder(0);
 
 	//debug("hello");
 	fclose(fp);

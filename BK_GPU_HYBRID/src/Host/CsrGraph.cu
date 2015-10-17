@@ -338,7 +338,7 @@ void Graph::calculateNeighbourArray() {
 		sort(neighbourArray[i].begin(),neighbourArray[i].begin()+size-1);
 
 		//Sort the Reject list values.
-		sort(preDegeneracyVertices.begin(),preDegeneracyVertices.end());
+		sort(preDegeneracyVertices[i].begin(),preDegeneracyVertices[i].end());
 	}
 
 	printf("Calculating neighbour done\n");

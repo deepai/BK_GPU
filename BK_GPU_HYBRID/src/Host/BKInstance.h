@@ -14,6 +14,7 @@
 #include "../utilities.h"
 #include "../cub/cub.cuh"
 #include "../moderngpu/moderngpu.cuh"
+#include "../Device/RecursionStack.h"
 
 
 
@@ -27,12 +28,16 @@ public:
 	BK_GPU::GPU_Stack *stack;
 	BK_GPU::StackElement topElement;
 	BK_GPU::NeighbourGraph *hostGraph;
+	BK_GPU::RecursionStack *tracker;
 	mgpu::ContextPtr Context;
 	Graph *host_graph;
+	cudaStream_t *Stream;
 
-	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack);
+
+	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,cudaStream_t &stream);
 	void RunCliqueFinder(int CliqueId);
-	void processPivot(BK_GPU::StackElement &element);
+	int processPivot(BK_GPU::StackElement &element);
+	void printClique(int CliqueSize,int beginClique);
 };
 
 } /* namespace BK_GPU */
