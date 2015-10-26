@@ -33,9 +33,9 @@ public:
 	}
 
 	__host__ __device__
-	void pop()
+	void pop(int count)
 	{
-		top--;
+		top-=count;
 		DEV_SYNC;
 	}
 

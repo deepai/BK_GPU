@@ -33,4 +33,7 @@ void GpuSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend);
 //extern "C" void GpuChoosePivotNeighbours(BK_GPU::NeighbourGraph &graph,
 	//	BK_GPU::GPU_Stack **stack, BK_GPU::GPU_CSR &InputGraph);
 
+extern "C"
+void GpuArrayRearrangeXtoP(BK_GPU::NeighbourGraph *graph,int* darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream);
+
 #endif /* KERNELS_CUH_ */

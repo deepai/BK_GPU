@@ -27,7 +27,7 @@ public:
 	BK_GPU::NeighbourGraph *Ng;
 	BK_GPU::GPU_Stack *stack;
 	BK_GPU::StackElement topElement;
-	BK_GPU::NeighbourGraph *hostGraph;
+	BK_GPU::StackElement secondElement;
 	BK_GPU::RecursionStack *tracker;
 	mgpu::ContextPtr Context;
 	Graph *host_graph;
@@ -38,6 +38,8 @@ public:
 	void RunCliqueFinder(int CliqueId);
 	int processPivot(BK_GPU::StackElement &element);
 	void printClique(int CliqueSize,int beginClique);
+	void moveToX();
+	void moveFromXtoP();
 };
 
 } /* namespace BK_GPU */

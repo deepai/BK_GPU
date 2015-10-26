@@ -35,6 +35,12 @@ public:
 		return elements[top];
 	}
 
+	__host__ __device__
+	StackElement& secondElement()
+	{
+		return elements[top-1];
+	}
+
 	/**
 	 * This method adds the values to the current top of the Stack
 	 *
@@ -73,7 +79,9 @@ public:
 	 */
 	__host__ __device__
 	void pop() {
+		//DEV_SYNC;
 		top--;
+		DEV_SYNC;
 	}
 };
 

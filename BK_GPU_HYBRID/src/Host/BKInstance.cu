@@ -18,55 +18,71 @@ namespace BK_GPU {
 BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 		BK_GPU::NeighbourGraph *Ng, BK_GPU::GPU_Stack *stack,cudaStream_t &stream) {
 	// TODO Auto-generated constructor stub
-	this->Ng = Ng;
-	this->gpuGraph = gpuGraph;
-	this->stack = stack;
-	this->topElement = stack->topElement();
-	this->hostGraph = new NeighbourGraph();
-	this->hostGraph = Ng;
+	this->Ng = Ng; 								//Neighbor graph allocated in Device memory
+	this->gpuGraph = gpuGraph; 					//CSR Graph allocated in Device memory
+	this->stack = stack; 						//Stack for the current Clique , allocated in the device memory
+	this->topElement = stack->topElement(); 	//StackElement resident in the CPU memory
 
-	this->Stream= &stream;
+	this->Stream= &stream;						//cudastream
 
 	this->Context = mgpu::CreateCudaDeviceAttachStream(0,*(this->Stream));
-	this->host_graph = host_graph;
+	this->host_graph = host_graph;				//Graph allocated in the host memory
 
-	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize);
+	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize); //This device resident is used to keep a track of non_neighbours for a given evalution of BK
 }
 
+/**
+ * Requires: Updated TopElement,Updated Stack,Sorted P and X segments.
+ *
+ * This element finds the pivot location.Once the pivot is located it is moved to the end of the current P segment.
+ * Thus R segment is increased by 1 and P segment is reduced by 1. The beginning of R is shifted by 1 towards P.
+ *
+ * At the end of this method,
+ * The topElement is updated,stack is updated with the new configuration.
+ * In this new configuration,the pivot element is moved to the R segment and the P segment size is changed to
+ * only contain the neighbors of Pivot in the P segment. i.e.
+ *
+ * X segment is updated to contain only the neighbors of the pivot,the current size of X is updated to reflect that.
+ * Both P and X segments are sorted post this method.
+ *
+ * Tracker is updated but contains the previous value itself.
+ *
+ * @param element
+ * @return
+ */
 int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	/**Step 1: Find the pivot element
 	 */
-	int currP = topElement.currPSize; //Size of Number of Elements in P
-	int currX = topElement.currXSize;
-	unsigned int *d_Sorted; //This is used to store the Unsorted elements initially
+	int currP = topElement.currPSize; //Number of Elements in P
+	int currX = topElement.currXSize; //Number of Elements in X
+	unsigned int *d_Sorted; 		  //Pointer to Neighbour graph of a vertex
 
-	void *d_temp_storage = NULL; //Auxillary array required for temporary Storage
-	size_t d_temp_size = sizeof(unsigned) * currP * 2; //size of auxillary array is 2*N
+	void *d_temp_storage = NULL; 	  //Auxillary array required for temporary Storage
+	size_t d_temp_size = sizeof(unsigned) * currP * 2; //size of auxillary array is 2*(X+P)
 
 	//Allocate Auxillary Array
 	gpuErrchk(cudaMallocManaged(&d_temp_storage, sizeof(unsigned)* 2 * (currP + currX)));
 
-	//Point to the unsorted input data
+	//Point to the unsorted input data (i.e. P Array in the device graph)
 	unsigned int *d_unSorted = (unsigned *) &(Ng->data[topElement.beginP]);
 	d_Sorted = d_unSorted;
 
-	DEV_SYNC
-	;
-	//Store the Node Value for each value in the currPArray
+	DEV_SYNC;
+	//Host memory used to store the current P array in the host.To make pivoting faster.
 	unsigned int *hptr = new unsigned[currP];
 
-	//Kernel to copy the current P Values to the host in the hptr array.
+	//Kernel to copy the current P array to the host in the hptr array.
 	GpuCopyOffsetAddresses(Ng, stack, gpuGraph, hptr, currP,*(this->Stream));
 
-	//This Array contains values 0 and 1 to store whether a value in the needle matches the haystack
+	//Various uses of dptr pointer
 	unsigned int* dptr;
 
-	//size currP to allow prefixSums
+	//set a maximum size of 2*(currP + currX)
 	gpuErrchk(cudaMallocManaged(&dptr, sizeof(int) * 2 *(currP + currX)));
 
-	DEV_SYNC
-	;
+	DEV_SYNC;
 
+	//Pointer to d_Sorted
 	unsigned int *adata = d_Sorted;
 
 	/** Max Index is used to store the index of value within P
@@ -77,8 +93,8 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	int currNeighbour, non_neighbours;
 	int acount = currP;
 
-	/** For each value in the P array. Obtain the count of its neighbour amongst P.
-	 *  The value with the maximum neighbour count is selected as the pivot. Other non-neighbours are also
+	/** For each value in the P segment. Obtain the count of its neighbors amongst P .
+	 *  The value with the maximum neighbor count is selected as the pivot. Other non-neighbors are also
 	 *  selected after the pivot is completed.
 	 *  This helps avoid unnecessary computations.
 	 *
@@ -114,7 +130,8 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 	d_unSorted = d_Sorted;
 //
-	gpuErrchk(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
+	if(currP > 2 )
+		gpuErrchk(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
 						d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,*(this->Stream)));
 
 
@@ -183,7 +200,8 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 		d_Sorted = d_unSorted;
 
 		//Output CurrX sorted into
-		gpuErrchk(
+		if(currX > 1)
+			gpuErrchk(
 				cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
 						d_unSorted, d_Sorted, currX,0,sizeof(uint)*8,*(this->Stream)));
 
@@ -196,8 +214,8 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 				adata, acount, bdata, adjacencySize, dptr, dptr, *Context,
 				&NeighboursinX, &nonNeighboursinX);
 
-
-		if(currX > 2)
+		//Scan only if currX size is greater than 1.
+		if(currX > 1)
 		{
 			/***
 			 * * Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
@@ -228,7 +246,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	int trackerSize = tracker->size() ;
 
 	stack->push(topElement.beginX, topElement.currXSize, topElement.beginP,
-			newPsize, newBeginR, newRsize, max_index,trackerSize, non_neighbours, true);
+			newPsize, newBeginR, newRsize, hptr[max_index],trackerSize, non_neighbours, true);
 
 	topElement.beginR = newBeginR;
 	topElement.currPSize = newPsize;
@@ -248,7 +266,83 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 	delete[] hptr;
 
-	return (non_neighbours + 1);
+	return (non_neighbours);
+
+}
+
+/**
+ * This method is used to copy back the previously used P value to the X array.
+ *
+ * Both X and P Arrays are Sorted post execution of this method.
+ *
+ */
+void BKInstance::moveToX()
+{
+
+	topElement=stack->topElement();
+
+	//Old_posElement is the last position of the P array.
+	int old_posElement = topElement.beginR - 1;
+
+	int new_posElement = topElement.beginP;
+
+	topElement.currXSize++;
+	topElement.currPSize--;
+	topElement.beginP++;
+
+	//swap the positions
+	GpuSwap(this->Ng,old_posElement,new_posElement);
+
+	//Sort if currPSize > 1
+	if(topElement.currPSize > 1)
+	{
+		int currP=topElement.currPSize;
+
+		void *aux_ptr;
+		size_t aux_size=sizeof(uint)*2*currP;
+
+		gpuErrchk(cudaMalloc(&aux_ptr,aux_size));
+
+		int *d_in=&(Ng->data[topElement.beginP]);
+		int *d_out=d_in;
+
+		//Sort the array.
+		gpuErrchk(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
+
+		gpuErrchk(cudaFree(aux_ptr));
+	}
+
+	//Sort if currXSize > 1
+	if(topElement.currXSize > 1)
+	{
+		int currX=topElement.currXSize;
+
+		void *aux_ptr;
+		size_t aux_size=sizeof(uint)*2*currX;
+
+		gpuErrchk(cudaMalloc(&aux_ptr,aux_size));
+
+		DEV_SYNC;
+
+		int *d_in=&(Ng->data[topElement.beginX]);
+		int *d_out=d_in;
+
+		//Sort the array.
+		gpuErrchk(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(uint)*8,*(this->Stream)));
+
+		gpuErrchk(cudaFree(aux_ptr));
+	}
+
+	DEV_SYNC;
+
+	//Pop the values of the previous stack
+	stack->pop();
+
+	//Push the new configuration values into the stack.
+	stack->push(topElement.beginX,topElement.currXSize,topElement.beginP,topElement.currPSize,topElement.beginR,topElement.currRSize,topElement.pivot,topElement.trackerSize+1,topElement.remainingNonNeighbour-1,topElement.direction);
+
+	//Push the newly moved element into the tracker.
+	tracker->push(topElement.pivot);
 
 }
 
@@ -260,6 +354,105 @@ void BKInstance::printClique(int CliqueSize,int beginClique)
 
 	printf("\n");
 #endif
+}
+
+/**
+ * This method is used to copy back the previously tracked values in the current recursion step
+ * from X to P array.
+ *
+ * Both X and P Arrays are Sorted post execution of this method.
+ *
+ */
+void BKInstance::moveFromXtoP()
+{
+	//obtain the top of the stack first.
+	topElement=stack->topElement();
+
+	//obtain the next value of the stack.
+	secondElement=stack->secondElement();
+
+	//Current Number of Elements in the tracker.
+	int currTrackerSize = tracker->size();
+
+	//Number of elements Tracked which have been moved from P to X in the current recursive call.
+	int NumValuesToMoveFromXToP = currTrackerSize - secondElement.trackerSize;
+
+	//Pointer to the tracker elements to sort them.
+	int *d_in=&(tracker->elements[currTrackerSize-1]),*d_out=d_in;
+
+	//Sorting is done only if NumValues > 1
+	if(NumValuesToMoveFromXToP > 1)
+	{
+		void *ptr;
+		size_t reserved_space=sizeof(int)*NumValuesToMoveFromXToP*2;
+
+		gpuErrchk(cudaMalloc(&ptr,reserved_space));
+
+		//Sort the Xvalues
+		gpuErrchk(cub::DeviceRadixSort::SortKeys(ptr,reserved_space,d_in,d_out,NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+
+		gpuErrchk(cudaFree(ptr));
+
+		DEV_SYNC;
+
+	}
+
+	//This array is used to store the search results versus the X elements
+	int* d_flags;
+	size_t dflagSize = sizeof(int)*2*(topElement.currXSize + topElement.currPSize);
+
+	int *adata=d_in;
+	int acount=NumValuesToMoveFromXToP;
+
+	int *bdata=&(Ng->data[topElement.beginX]);
+	int bcount=topElement.currXSize;
+
+	int NeighboursinX,nonNeighboursinX;
+
+	//Allocate memory for the flags
+	gpuErrchk(cudaMalloc(&d_flags,dflagSize));
+
+	//Do a Sorted Search to check which values in bdata matches with values in  adata.
+	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
+					adata, acount, bdata, bcount, d_flags, d_flags, *Context,
+					&NeighboursinX, &nonNeighboursinX);
+
+	//if bcount > 1 , do an inclusive sum.
+	if(bcount > 1)
+	{
+		void *ptr=NULL;
+		size_t requiredSpace;
+
+		//Inclusive Sum
+		gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
+
+		gpuErrchk(cudaMalloc(&ptr,requiredSpace));
+
+		gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
+
+		gpuErrchk(cudaFree(ptr));
+
+	}
+
+	//This kernel is used to rearrange back the X values towards P.
+	GpuArrayRearrangeXtoP(Ng,d_flags,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
+
+	d_in=&(Ng->data[topElement.beginP-NumValuesToMoveFromXToP]);
+
+	//Sort the NumValuesToMoveFromXToP + CurrPSize elements.
+	gpuErrchk(cub::DeviceRadixSort::SortKeys(d_flags,dflagSize,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+
+	gpuErrchk(cudaFree(d_flags));
+
+	//remove the nodes from the tracker
+	DEV_SYNC;
+
+	tracker->pop(NumValuesToMoveFromXToP);
+
+	//pop the current stack value.
+	stack->pop();
+
+
 }
 
 void BKInstance::RunCliqueFinder(int CliqueId) {
@@ -280,13 +473,23 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 	}
 	else {
 		int non_neighbours = processPivot(topElement);
+		int pivot = topElement.pivot;
+
 		RunCliqueFinder(CliqueId);
 
 		stack->pop();
 
-		tracker->push(topElement.pivot);
+		//moveToX();
 
-		tracker->pop();
+		while(non_neighbours)
+		{
+			//moveToX();
+			non_neighbours--;
+		}
+
+		//moveFromXtoP();
+
+		//Bring Back all values used in X into currP array.
 	}
 }
 
