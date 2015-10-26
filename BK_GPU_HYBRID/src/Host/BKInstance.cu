@@ -271,27 +271,42 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 }
 
 /**
- * This method is used to copy back the previously used P value to the X array.
+ * Requirements:None
+ *
+ * This method is used to copy back the previously used P value to the X array.i.e. The value at position beginR
+ * is moved to value at position beginX + currX -1
+ *
+ * The X segment is increased by 1,the R segment is decreased by 1.
+ * beginP is shifted by 1 to accomodate the new X.
+ * begin R is hence also shifted by 1.
  *
  * Both X and P Arrays are Sorted post execution of this method.
- *
+ * The previous stack configuration is popped and a new configuration is pushed into it.
+ * The new stack configuration has the updated X and R values
  */
 void BKInstance::moveToX()
 {
-
+	//Update the topElement.
 	topElement=stack->topElement();
 
 	//Old_posElement is the last position of the P array.
 	int old_posElement = topElement.beginR - 1;
 
-	int new_posElement = topElement.beginP;
+	//new position for the X value would be at topElement.beginX + topElement.currXSize
+	int new_posElement = topElement.beginX + topElement.currXSize;
+
+
+
+	//swap the positions
+	GpuSwap(this->Ng,old_posElement,new_posElement);
+
+	//If beginP is not swapped, swap it with the old_position to move back the X element into its previous position
+	if(new_posElement!=topElement.beginP)
+		GpuSwap(this->Ng,topElement.beginP,old_posElement);
 
 	topElement.currXSize++;
 	topElement.currPSize--;
 	topElement.beginP++;
-
-	//swap the positions
-	GpuSwap(this->Ng,old_posElement,new_posElement);
 
 	//Sort if currPSize > 1
 	if(topElement.currPSize > 1)
@@ -339,7 +354,7 @@ void BKInstance::moveToX()
 	stack->pop();
 
 	//Push the new configuration values into the stack.
-	stack->push(topElement.beginX,topElement.currXSize,topElement.beginP,topElement.currPSize,topElement.beginR,topElement.currRSize,topElement.pivot,topElement.trackerSize+1,topElement.remainingNonNeighbour-1,topElement.direction);
+	stack->push(topElement.beginX,topElement.currXSize,topElement.beginP,topElement.currPSize,topElement.beginR,topElement.currRSize,topElement.pivot,topElement.trackerSize+1,topElement.remainingNonNeighbour,topElement.direction);
 
 	//Push the newly moved element into the tracker.
 	tracker->push(topElement.pivot);
@@ -357,10 +372,21 @@ void BKInstance::printClique(int CliqueSize,int beginClique)
 }
 
 /**
+ * Requirements:None
+ *
  * This method is used to copy back the previously tracked values in the current recursion step
  * from X to P array.
  *
+ * Calculate number of Values tracked and needed to be moved into P from X.
+ * Do a sorted Search for the values.
+ * Do a prefix sum on the result of the sorted search on the entire X#### segment.
+ * Do a GpuRearrange to rearrange the Tracked values towards the beginning of the P.
+ * The rest of the values maintain their previous relative positions.
+ *
  * Both X and P Arrays are Sorted post execution of this method.
+ * Tracker size is removed by number of TrackedElements
+ * Stack is then popped once to go back to the previous state before the current recursive invocation.
+ *
  *
  */
 void BKInstance::moveFromXtoP()
@@ -378,7 +404,7 @@ void BKInstance::moveFromXtoP()
 	int NumValuesToMoveFromXToP = currTrackerSize - secondElement.trackerSize;
 
 	//Pointer to the tracker elements to sort them.
-	int *d_in=&(tracker->elements[currTrackerSize-1]),*d_out=d_in;
+	int *d_in=&(tracker->elements[currTrackerSize-NumValuesToMoveFromXToP]),*d_out=d_in;
 
 	//Sorting is done only if NumValues > 1
 	if(NumValuesToMoveFromXToP > 1)
@@ -397,15 +423,20 @@ void BKInstance::moveFromXtoP()
 
 	}
 
-	//This array is used to store the search results versus the X elements
+	/**
+	 * We need to now search for the tracked elements towards the left of P segment.
+	 * Segment indicates X####|P###|R where # represents unused values
+	 * Thus left of Segment is X####.
+	 *
+	 */
 	int* d_flags;
-	size_t dflagSize = sizeof(int)*2*(topElement.currXSize + topElement.currPSize);
+	size_t dflagSize = sizeof(int)*2*(topElement.beginP + 1);
 
 	int *adata=d_in;
 	int acount=NumValuesToMoveFromXToP;
 
 	int *bdata=&(Ng->data[topElement.beginX]);
-	int bcount=topElement.currXSize;
+	int bcount=topElement.beginP;
 
 	int NeighboursinX,nonNeighboursinX;
 
@@ -440,7 +471,8 @@ void BKInstance::moveFromXtoP()
 	d_in=&(Ng->data[topElement.beginP-NumValuesToMoveFromXToP]);
 
 	//Sort the NumValuesToMoveFromXToP + CurrPSize elements.
-	gpuErrchk(cub::DeviceRadixSort::SortKeys(d_flags,dflagSize,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+	if(topElement.currPSize + NumValuesToMoveFromXToP > 1)
+		gpuErrchk(cub::DeviceRadixSort::SortKeys(d_flags,dflagSize,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
 
 	gpuErrchk(cudaFree(d_flags));
 
