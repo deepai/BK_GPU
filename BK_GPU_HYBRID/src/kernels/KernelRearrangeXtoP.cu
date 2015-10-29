@@ -52,6 +52,9 @@ void GpuArrayRearrangeXtoP(BK_GPU::NeighbourGraph *graph,int* darray,int start_o
 	int *d_temp;
 	gpuErrchk(cudaMalloc(&d_temp,sizeof(int)*NumElements));
 
+	if(NumElements < 2)
+		return;
+
 	kernelRearrangeGatherXToP<<<ceil((double)NumElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countOnes,graph);
 
 	DEV_SYNC;

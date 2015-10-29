@@ -289,8 +289,10 @@ void BKInstance::moveToX()
 	//Update the topElement.
 	topElement=stack->topElement();
 
+	secondElement=stack->secondElement();
+
 	//Old_posElement is the last position of the P array.
-	int old_posElement = topElement.beginR - 1;
+	int old_posElement = topElement.beginR;
 
 	//new position for the X value would be at topElement.beginX + topElement.currXSize
 	int new_posElement = topElement.beginX + topElement.currXSize;
@@ -305,8 +307,9 @@ void BKInstance::moveToX()
 		GpuSwap(this->Ng,topElement.beginP,old_posElement);
 
 	topElement.currXSize++;
-	topElement.currPSize--;
+	topElement.currRSize--;
 	topElement.beginP++;
+	topElement.beginR++;
 
 	//Sort if currPSize > 1
 	if(topElement.currPSize > 1)
@@ -410,7 +413,7 @@ void BKInstance::moveFromXtoP()
 	if(NumValuesToMoveFromXToP > 1)
 	{
 		void *ptr;
-		size_t reserved_space=sizeof(int)*NumValuesToMoveFromXToP*2;
+		size_t reserved_space=sizeof(int)*currTrackerSize*2;
 
 		gpuErrchk(cudaMalloc(&ptr,reserved_space));
 
@@ -430,22 +433,25 @@ void BKInstance::moveFromXtoP()
 	 *
 	 */
 	int* d_flags;
-	size_t dflagSize = sizeof(int)*2*(topElement.beginP + 1);
+	size_t dflagSize = sizeof(int)*2*(topElement.beginP - topElement.beginX + 1);
 
 	int *adata=d_in;
 	int acount=NumValuesToMoveFromXToP;
 
 	int *bdata=&(Ng->data[topElement.beginX]);
-	int bcount=topElement.beginP;
+	int bcount=topElement.beginP - topElement.beginX; //The size of the bdata array is X####. We need to search it there
 
 	int NeighboursinX,nonNeighboursinX;
 
 	//Allocate memory for the flags
 	gpuErrchk(cudaMalloc(&d_flags,dflagSize));
 
+	//Initialize the memory by 0
+	gpuErrchk(cudaMemset(d_flags,0,sizeof(int)*bcount));
+
 	//Do a Sorted Search to check which values in bdata matches with values in  adata.
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-					adata, acount, bdata, bcount, d_flags, d_flags, *Context,
+					adata, acount, bdata, topElement.currXSize, d_flags, d_flags, *Context,
 					&NeighboursinX, &nonNeighboursinX);
 
 	//if bcount > 1 , do an inclusive sum.
@@ -465,10 +471,12 @@ void BKInstance::moveFromXtoP()
 
 	}
 
+	DEV_SYNC;
+
 	//This kernel is used to rearrange back the X values towards P.
 	GpuArrayRearrangeXtoP(Ng,d_flags,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
 
-	d_in=&(Ng->data[topElement.beginP-NumValuesToMoveFromXToP]);
+	d_in=&(Ng->data[topElement.beginP - NumValuesToMoveFromXToP]);
 
 	//Sort the NumValuesToMoveFromXToP + CurrPSize elements.
 	if(topElement.currPSize + NumValuesToMoveFromXToP > 1)
@@ -490,7 +498,7 @@ void BKInstance::moveFromXtoP()
 void BKInstance::RunCliqueFinder(int CliqueId) {
 
 //	//topElement.printconfig();
-//	if(topElement.currRSize%50==0)
+//	if(CliqueId==4)
 //		topElement.printconfig();
 
 	if ((topElement.currPSize == topElement.currXSize)
@@ -509,9 +517,11 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 
 		RunCliqueFinder(CliqueId);
 
-		stack->pop();
+		//topElement=stack->topElement();
 
-		//moveToX();
+		//stack->pop();
+
+		moveToX();
 
 		while(non_neighbours)
 		{
@@ -519,7 +529,7 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 			non_neighbours--;
 		}
 
-		//moveFromXtoP();
+		moveFromXtoP();
 
 		//Bring Back all values used in X into currP array.
 	}
