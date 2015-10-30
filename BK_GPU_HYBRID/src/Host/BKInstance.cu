@@ -525,7 +525,8 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 
 		while(non_neighbours)
 		{
-			//moveToX();
+			nextNonPivot();
+			moveToX();
 			non_neighbours--;
 		}
 

@@ -40,6 +40,7 @@ public:
 	void printClique(int CliqueSize,int beginClique);
 	void moveToX();
 	void moveFromXtoP();
+	void nextNonPivot();
 };
 
 } /* namespace BK_GPU */
