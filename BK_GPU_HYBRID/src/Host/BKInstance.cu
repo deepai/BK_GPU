@@ -495,6 +495,21 @@ void BKInstance::moveFromXtoP()
 
 }
 
+/**
+ * RunCliqueFinder is the main recursive call that emulates the BK_Tomita algorithm in the heteregenous sector.
+ * This algorithm works independently on a single cuda stream.
+ *
+ * Further plans to use CPU when currPSize becomes smaller than 128.
+ *
+ * Initial requirements of this algorithm are
+ * 1)TopElement
+ * 2)Neighbor graph in GPU
+ * 3)CSR graph in GPU
+ * 4)Stack Element in GPU
+ *
+ *
+ * @param CliqueId
+ */
 void BKInstance::RunCliqueFinder(int CliqueId) {
 
 //	//topElement.printconfig();
