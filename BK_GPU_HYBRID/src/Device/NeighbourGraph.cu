@@ -25,26 +25,17 @@ NeighbourGraph::NeighbourGraph(int nodes, int neighbours) {
 	this->nodes = nodes;
 	this->totallength = neighbours;
 
-	gpuErrchk(cudaMallocManaged(&dataOffset, sizeof(int) * (this->nodes + 1)));
-	gpuErrchk(cudaMallocManaged(&data, sizeof(int) * (this->totallength)));
+	CudaError(cudaMalloc(&dataOffset, sizeof(int) * (this->nodes + 1)));
+	CudaError(cudaMalloc(&data, sizeof(int) * (this->totallength)));
 
 	DEV_SYNC;
 }
 
-void *NeighbourGraph::operator new(size_t len) {
-	void *ptr;
-	gpuErrchk(cudaMallocManaged(&ptr, len * sizeof(NeighbourGraph)));
-	DEV_SYNC;
-	return ptr;
-}
-
-void NeighbourGraph::operator delete(void *ptr) {
-	DEV_SYNC;
-	gpuErrchk(cudaFree(ptr));
-}
 
 NeighbourGraph::~NeighbourGraph() {
 	// TODO Auto-generated destructor stub
+	CudaError(cudaFree(data));
+	CudaError(cudaFree(dataOffset));
 }
 
 /**
@@ -56,20 +47,18 @@ NeighbourGraph::~NeighbourGraph() {
  */
 void NeighbourGraph::copy(int nodeindex, int offset, int *neighbours, int Psize,int *rejectLists,int Rsize) {
 
-	gpuErrchk(
+	CudaError(
 			cudaMemcpy(data + offset, rejectLists, sizeof(int) * Rsize,
 					cudaMemcpyHostToDevice));
-	gpuErrchk(cudaMemcpy(data + offset + Rsize,neighbours,sizeof(int) * Psize,cudaMemcpyHostToDevice));
+	CudaError(cudaMemcpy(data + offset + Rsize,neighbours,sizeof(int) * Psize,cudaMemcpyHostToDevice));
 
-	DEV_SYNC;
+	//DEV_SYNC;
 
+	int lastValue=offset + Psize + Rsize;
 
-	dataOffset[nodeindex] = offset;
-	dataOffset[nodeindex + 1] = offset + Psize + Rsize;
+	CudaError(cudaMemcpy(dataOffset+nodeindex,&offset,sizeof(int),cudaMemcpyHostToDevice));
+	CudaError(cudaMemcpy(dataOffset+nodeindex+1,&lastValue,sizeof(int),cudaMemcpyHostToDevice));
 
-	//debug("Elements swapped are ",temp,data[offset]);
-
-	DEV_SYNC;
 }
 
 template<typename InputIterator1, typename InputIterator2,

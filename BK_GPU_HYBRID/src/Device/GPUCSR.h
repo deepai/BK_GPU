@@ -23,8 +23,8 @@ public:
 
 	GPU_CSR(Graph &host_graph);
 
-	void *operator new(size_t len);
-	void operator delete(void *ptr);
+	~GPU_CSR();
+
 
 };
 

@@ -12,7 +12,7 @@ namespace BK_GPU {
 GPU_Stack::GPU_Stack(int size) {
 	// TODO Auto-generated constructor stub
 	top = -1;
-	gpuErrchk(cudaMallocManaged(&elements, sizeof(StackElement) * size));
+	CudaError(cudaMallocManaged(&elements, sizeof(StackElement) * size));
 	DEV_SYNC;
 }
 
@@ -23,21 +23,21 @@ GPU_Stack::~GPU_Stack() {
 
 void *GPU_Stack::operator new(size_t len) {
 	void *ptr;
-	gpuErrchk(cudaMallocManaged(&ptr, sizeof(GPU_Stack) * len));
+	CudaError(cudaMallocManaged(&ptr, sizeof(GPU_Stack) * len));
 	DEV_SYNC;
 	return ptr;
 }
 
 void *GPU_Stack::operator new[](std::size_t count) {
 	void *ptr;
-	gpuErrchk(cudaMallocManaged(&ptr, sizeof(GPU_Stack*) * count))
+	CudaError(cudaMallocManaged(&ptr, sizeof(GPU_Stack*) * count))
 	DEV_SYNC;
 	return ptr;
 }
 
 void GPU_Stack::operator delete(void *ptr) {
 	DEV_SYNC;
-	gpuErrchk(cudaFree(ptr));
+	CudaError(cudaFree(ptr));
 }
 
 StackElement& GPU_Stack::operator [](int x) {

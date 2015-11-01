@@ -15,8 +15,11 @@ using namespace mgpu;
 
 namespace BK_GPU {
 
+
 BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 		BK_GPU::NeighbourGraph *Ng, BK_GPU::GPU_Stack *stack,cudaStream_t &stream) {
+
+	this->maxCliqueSizeObtained = 1;
 	// TODO Auto-generated constructor stub
 	this->Ng = Ng; 								//Neighbor graph allocated in Device memory
 	this->gpuGraph = gpuGraph; 					//CSR Graph allocated in Device memory
@@ -61,10 +64,10 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	size_t d_temp_size = sizeof(unsigned) * currP * 2; //size of auxillary array is 2*(X+P)
 
 	//Allocate Auxillary Array
-	gpuErrchk(cudaMallocManaged(&d_temp_storage, sizeof(unsigned)* 2 * (currP + currX)));
+	CudaError(cudaMallocManaged(&d_temp_storage, sizeof(unsigned)* 2 * (currP + currX)));
 
 	//Point to the unsorted input data (i.e. P Array in the device graph)
-	unsigned int *d_unSorted = (unsigned *) &(Ng->data[topElement.beginP]);
+	unsigned int *d_unSorted = (unsigned *)(Ng->data) + topElement.beginP;
 	d_Sorted = d_unSorted;
 
 	DEV_SYNC;
@@ -78,7 +81,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	unsigned int* dptr;
 
 	//set a maximum size of 2*(currP + currX)
-	gpuErrchk(cudaMallocManaged(&dptr, sizeof(int) * 2 *(currP + currX)));
+	CudaError(cudaMallocManaged(&dptr, sizeof(int) * 2 *(currP + currX)));
 
 	DEV_SYNC;
 
@@ -104,8 +107,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 		//std::cout << adjacencySize << ", " << host_graph->rowOffset[hptr[i] + 1] << " " << host_graph->rowOffset[hptr[i]]<< std::endl;
 
-		unsigned int *bdata =
-				&(gpuGraph->Columns[host_graph->rowOffset[hptr[i]]]);
+		unsigned int *bdata =gpuGraph->Columns + host_graph->rowOffset[hptr[i]];
 
 		DEV_SYNC
 		; //
@@ -131,7 +133,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	d_unSorted = d_Sorted;
 //
 	if(currP > 2 )
-		gpuErrchk(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
 						d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,*(this->Stream)));
 
 
@@ -146,8 +148,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 			- host_graph->rowOffset[hptr[max_index]];
 
 	//pointer to the beginning of the adjancy list for the maximum value
-	unsigned *bdata =
-			&(gpuGraph->Columns[host_graph->rowOffset[hptr[max_index]]]);
+	unsigned *bdata = gpuGraph->Columns + host_graph->rowOffset[hptr[max_index]];
 
 	//This calculates the number of remaining non-neighbours of pivot.
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
@@ -166,14 +167,14 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 		size_t requiredmemSize;void *ptr=NULL;
 
 		//Ist Invocation calculates the amount of memory required for the temporary array.
-		gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currP - 1,*(this->Stream)));
+		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currP - 1,*(this->Stream)));
 
-		gpuErrchk(cudaMalloc(&ptr,requiredmemSize));
+		CudaError(cudaMalloc(&ptr,requiredmemSize));
 
 		//This step does the actual inclusiveSum
-		gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currP - 1,*(this->Stream)));
+		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currP - 1,*(this->Stream)));
 
-		gpuErrchk(cudaFree(ptr));
+		CudaError(cudaFree(ptr));
 	}
 
 	DEV_SYNC;
@@ -196,12 +197,12 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 		d_temp_size = 2 * currX * sizeof(int);
 
 		//Pointer to the CurrX Values
-		d_unSorted = (unsigned *) &(Ng->data[topElement.beginX]);
+		d_unSorted = (unsigned *)(Ng->data) + topElement.beginX;
 		d_Sorted = d_unSorted;
 
 		//Output CurrX sorted into
 		if(currX > 1)
-			gpuErrchk(
+			CudaError(
 				cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
 						d_unSorted, d_Sorted, currX,0,sizeof(uint)*8,*(this->Stream)));
 
@@ -222,13 +223,13 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 			 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
 			size_t requiredmemSize = 0; void *ptr=NULL;
 
-			gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currX,*(this->Stream)));
+			CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currX,*(this->Stream)));
 
-			gpuErrchk(cudaMalloc(&ptr,requiredmemSize));
+			CudaError(cudaMalloc(&ptr,requiredmemSize));
 
-			gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currX,*(this->Stream)));
+			CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currX,*(this->Stream)));
 
-			gpuErrchk(cudaFree(ptr));
+			CudaError(cudaFree(ptr));
 
 			DEV_SYNC;
 		}
@@ -260,8 +261,8 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	//debug(dptr[0],dptr[1],dptr[2],dptr[3]);
 
 	/**Free the pointers **/
-	gpuErrchk(cudaFree(d_temp_storage));
-	gpuErrchk(cudaFree(dptr));
+	CudaError(cudaFree(d_temp_storage));
+	CudaError(cudaFree(dptr));
 
 
 	delete[] hptr;
@@ -319,15 +320,15 @@ void BKInstance::moveToX()
 		void *aux_ptr;
 		size_t aux_size=sizeof(uint)*2*currP;
 
-		gpuErrchk(cudaMalloc(&aux_ptr,aux_size));
+		CudaError(cudaMalloc(&aux_ptr,aux_size));
 
-		int *d_in=&(Ng->data[topElement.beginP]);
+		int *d_in=Ng->data + topElement.beginP;
 		int *d_out=d_in;
 
 		//Sort the array.
-		gpuErrchk(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
 
-		gpuErrchk(cudaFree(aux_ptr));
+		CudaError(cudaFree(aux_ptr));
 	}
 
 	//Sort if currXSize > 1
@@ -338,17 +339,17 @@ void BKInstance::moveToX()
 		void *aux_ptr;
 		size_t aux_size=sizeof(uint)*2*currX;
 
-		gpuErrchk(cudaMalloc(&aux_ptr,aux_size));
+		CudaError(cudaMalloc(&aux_ptr,aux_size));
 
 		DEV_SYNC;
 
-		int *d_in=&(Ng->data[topElement.beginX]);
+		int *d_in=Ng->data + topElement.beginX;
 		int *d_out=d_in;
 
 		//Sort the array.
-		gpuErrchk(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(uint)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(uint)*8,*(this->Stream)));
 
-		gpuErrchk(cudaFree(aux_ptr));
+		CudaError(cudaFree(aux_ptr));
 	}
 
 	DEV_SYNC;
@@ -415,12 +416,12 @@ void BKInstance::moveFromXtoP()
 		void *ptr;
 		size_t reserved_space=sizeof(int)*currTrackerSize*2;
 
-		gpuErrchk(cudaMalloc(&ptr,reserved_space));
+		CudaError(cudaMalloc(&ptr,reserved_space));
 
 		//Sort the Xvalues
-		gpuErrchk(cub::DeviceRadixSort::SortKeys(ptr,reserved_space,d_in,d_out,NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(ptr,reserved_space,d_in,d_out,NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
 
-		gpuErrchk(cudaFree(ptr));
+		CudaError(cudaFree(ptr));
 
 		DEV_SYNC;
 
@@ -438,16 +439,16 @@ void BKInstance::moveFromXtoP()
 	int *adata=d_in;
 	int acount=NumValuesToMoveFromXToP;
 
-	int *bdata=&(Ng->data[topElement.beginX]);
+	int *bdata=Ng->data + topElement.beginX;
 	int bcount=topElement.beginP - topElement.beginX; //The size of the bdata array is X####. We need to search it there
 
 	int NeighboursinX,nonNeighboursinX;
 
 	//Allocate memory for the flags
-	gpuErrchk(cudaMalloc(&d_flags,dflagSize));
+	CudaError(cudaMalloc(&d_flags,dflagSize));
 
 	//Initialize the memory by 0
-	gpuErrchk(cudaMemset(d_flags,0,sizeof(int)*bcount));
+	CudaError(cudaMemset(d_flags,0,sizeof(int)*bcount));
 
 	//Do a Sorted Search to check which values in bdata matches with values in  adata.
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
@@ -461,13 +462,13 @@ void BKInstance::moveFromXtoP()
 		size_t requiredSpace;
 
 		//Inclusive Sum
-		gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
+		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
 
-		gpuErrchk(cudaMalloc(&ptr,requiredSpace));
+		CudaError(cudaMalloc(&ptr,requiredSpace));
 
-		gpuErrchk(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
+		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
 
-		gpuErrchk(cudaFree(ptr));
+		CudaError(cudaFree(ptr));
 
 	}
 
@@ -476,13 +477,13 @@ void BKInstance::moveFromXtoP()
 	//This kernel is used to rearrange back the X values towards P.
 	GpuArrayRearrangeXtoP(Ng,d_flags,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
 
-	d_in=&(Ng->data[topElement.beginP - NumValuesToMoveFromXToP]);
+	d_in=Ng->data + topElement.beginP - NumValuesToMoveFromXToP;
 
 	//Sort the NumValuesToMoveFromXToP + CurrPSize elements.
 	if(topElement.currPSize + NumValuesToMoveFromXToP > 1)
-		gpuErrchk(cub::DeviceRadixSort::SortKeys(d_flags,dflagSize,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_flags,dflagSize,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
 
-	gpuErrchk(cudaFree(d_flags));
+	CudaError(cudaFree(d_flags));
 
 	//remove the nodes from the tracker
 	DEV_SYNC;
@@ -518,6 +519,10 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 
 	if ((topElement.currPSize == topElement.currXSize)
 			&& (topElement.currXSize == 0)) {		//Obtained a Clique
+
+		if(topElement.currRSize > maxCliqueSizeObtained)
+			maxCliqueSizeObtained = topElement.currRSize;
+
 		printf("%d) Clique of size %d, found!\n",CliqueId,topElement.currRSize);
 		printClique(topElement.currRSize,topElement.beginR);
 		return;
@@ -527,20 +532,23 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 		return; //didn't obtain a Clique
 	}
 	else {
+
+
 		int non_neighbours = processPivot(topElement);
 		int pivot = topElement.pivot;
 
-		RunCliqueFinder(CliqueId);
-
-		//topElement=stack->topElement();
-
-		//stack->pop();
+		if(topElement.currRSize + topElement.currPSize > maxCliqueSizeObtained)
+			RunCliqueFinder(CliqueId);
 
 		moveToX();
 
 		while(non_neighbours)
 		{
 			nextNonPivot();
+
+			if(topElement.currRSize + topElement.currPSize > maxCliqueSizeObtained)
+				RunCliqueFinder(CliqueId);
+
 			moveToX();
 			non_neighbours--;
 		}

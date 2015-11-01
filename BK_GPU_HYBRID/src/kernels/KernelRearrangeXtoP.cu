@@ -1,7 +1,7 @@
 #include "kernels.cuh"
 
 __global__
-void kernelRearrangeGatherXToP(int *darray,int *d_temp,int start_offset,int end_offset,int countOnes,BK_GPU::NeighbourGraph *graph)
+void kernelRearrangeGatherXToP(int *darray,int *d_temp,int start_offset,int end_offset,int countOnes,int *data)
 {
   int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -27,21 +27,21 @@ void kernelRearrangeGatherXToP(int *darray,int *d_temp,int start_offset,int end_
   }
 
   //Copy the current Element before swapping
-  int currElement=graph->data[tid+start_offset];
+  int currElement=data[tid+start_offset];
 
   d_temp[destination] = currElement;
 
 }
 
 __global__
-void KernelRearrangeScatterXToP(int *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
+void KernelRearrangeScatterXToP(int *d_temp,int start_offset,int end_offset,int *data)
 {
   int tid = threadIdx.x + blockDim.x*blockIdx.x;
 
   if(tid+start_offset > end_offset)
     return;
 
-  graph->data[tid + start_offset] = d_temp[tid];
+  data[tid + start_offset] = d_temp[tid];
 }
 
 extern "C"
@@ -50,19 +50,19 @@ void GpuArrayRearrangeXtoP(BK_GPU::NeighbourGraph *graph,int* darray,int start_o
 	int NumElements=end_offset - start_offset + 1;
 
 	int *d_temp;
-	gpuErrchk(cudaMalloc(&d_temp,sizeof(int)*NumElements));
+	CudaError(cudaMalloc(&d_temp,sizeof(int)*NumElements));
 
 	if(NumElements < 2)
 		return;
 
-	kernelRearrangeGatherXToP<<<ceil((double)NumElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countOnes,graph);
+	kernelRearrangeGatherXToP<<<ceil((double)NumElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countOnes,graph->data);
 
 	DEV_SYNC;
 
-	KernelRearrangeScatterXToP<<<ceil((double)NumElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph);
+	KernelRearrangeScatterXToP<<<ceil((double)NumElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph->data);
 
 	DEV_SYNC;
 
-	gpuErrchk(cudaFree(d_temp));
+	CudaError(cudaFree(d_temp));
 }
 

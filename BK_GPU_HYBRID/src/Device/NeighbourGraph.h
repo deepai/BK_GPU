@@ -28,9 +28,6 @@ public:
 	int *data;
 	int *dataOffset;
 
-	void *operator new(size_t len);
-	void operator delete(void *ptr);
-
 	void copy(int nodeindex, int offset, int *neighbours, int Psize,int *rejectLists,int Rsize);
 
 	template<typename InputIterator1, typename InputIterator2,
@@ -41,21 +38,6 @@ public:
 
 	NeighbourGraph();
 	NeighbourGraph(int nodes, int neighbours);
-
-	__host__
-	NeighbourGraph* operator=(const NeighbourGraph *other)
-	{
-		this->cliqueSize=other->cliqueSize;
-		this->nodes=other->nodes;
-		this->totallength=other->totallength;
-
-		//std::cout << this->cliqueSize << " " << this->nodes << " " << this->totallength << std::endl;
-
-		gpuErrchk(cudaMemcpy(this->data,other->data,sizeof(int)*(this->totallength),cudaMemcpyDeviceToHost));
-		gpuErrchk(cudaMemcpy(this->dataOffset,other->dataOffset,sizeof(int)*(this->nodes+1),cudaMemcpyDeviceToHost));
-
-		return this;
-	}
 
 	~NeighbourGraph();
 };

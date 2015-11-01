@@ -14,7 +14,7 @@
 #include <assert.h>
 #include <cuda_runtime.h>
 
-#define DEV_SYNC gpuErrchk(cudaDeviceSynchronize())
+#define DEV_SYNC CudaError(cudaDeviceSynchronize())
 
 //#define PRINTCLIQUES
 
@@ -48,7 +48,7 @@ extern debugger dbg;
 
 #define debug(args...)            {dbg,args; std::cerr<<std::endl;}
 
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+#define CudaError(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 		true) {
 	if (code != cudaSuccess) {

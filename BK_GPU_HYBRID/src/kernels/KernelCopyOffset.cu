@@ -11,8 +11,8 @@
  * @param currPSize currPSize
  */
 __global__
-void kernel_CopyAddress(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *dptr,int currPSize)
+void kernel_CopyAddress(int *data,
+		BK_GPU::GPU_Stack *stack,unsigned int *dptr,int currPSize)
 {
 	int tid=threadIdx.x + blockIdx.x*blockDim.x;
 	if(tid >= currPSize)
@@ -20,7 +20,7 @@ void kernel_CopyAddress(BK_GPU::NeighbourGraph *graph,
 	else
 	{
 		int beginP=stack->topElement().beginP;
-		dptr[tid]=graph->data[beginP+tid];
+		dptr[tid]=data[beginP+tid];
 	}
 }
 
@@ -38,13 +38,13 @@ void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
 		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream)
 {
 	unsigned int *dptr;
-	gpuErrchk(cudaMalloc(&dptr,sizeof(unsigned int)*currPSize));
+	CudaError(cudaMalloc(&dptr,sizeof(unsigned int)*currPSize));
 
-	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128,0,stream>>>(graph,stack,InputGraph,dptr,currPSize);
+	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128,0,stream>>>(graph->data,stack,dptr,currPSize);
 	DEV_SYNC;
 
 	//Copy back the values from the dptr to host memory
-	gpuErrchk(cudaMemcpy(host,dptr,sizeof(unsigned int )*currPSize,cudaMemcpyDeviceToHost));
+	CudaError(cudaMemcpy(host,dptr,sizeof(unsigned int )*currPSize,cudaMemcpyDeviceToHost));
 
-	gpuErrchk(cudaFree(dptr));
+	CudaError(cudaFree(dptr));
 }

@@ -23,6 +23,8 @@ namespace BK_GPU {
 class BKInstance {
 public:
 
+	int maxCliqueSizeObtained;
+
 	BK_GPU::GPU_CSR *gpuGraph;
 	BK_GPU::NeighbourGraph *Ng;
 	BK_GPU::GPU_Stack *stack;
@@ -32,7 +34,6 @@ public:
 	mgpu::ContextPtr Context;
 	Graph *host_graph;
 	cudaStream_t *Stream;
-
 
 	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,cudaStream_t &stream);
 	void RunCliqueFinder(int CliqueId);

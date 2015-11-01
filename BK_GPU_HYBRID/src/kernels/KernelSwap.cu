@@ -14,7 +14,7 @@
  * @param swapend 2nd swap position
  */
 __global__
-void KernelSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend)
+void KernelSwap(int *data,int swapstart,int swapend)
 {
 	__shared__ int val[2];
 
@@ -25,9 +25,9 @@ void KernelSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend)
 
 	int offset=(1-tid)*swapstart + tid*swapend;
 
-	val[1-tid]=graph->data[offset];
+	val[1-tid]=data[offset];
 
-	graph->data[offset] = val[tid];
+	data[offset] = val[tid];
 }
 
 /**
@@ -39,6 +39,6 @@ void KernelSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend)
 extern "C"
 void GpuSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend)
 {
-	KernelSwap<<<1,32>>>(graph,swapstart,swapend);
+	KernelSwap<<<1,32>>>(graph->data,swapstart,swapend);
 	DEV_SYNC;
 }

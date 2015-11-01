@@ -11,7 +11,7 @@
  * @param countOnes
  */
 __global__
-void KernelSwapNonPivot(BK_GPU::NeighbourGraph *graph,int *dPos,int* darray,int start_offset,int end_offset,int countOnes)
+void KernelSwapNonPivot(int *dPos,int* darray,int start_offset,int end_offset,int countOnes)
 {
 	__shared__ int pos;
 
@@ -50,9 +50,9 @@ void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int* darray,int start_of
 
 	int *d_pos;
 
-	gpuErrchk(cudaMallocManaged(&d_pos,sizeof(int)));
+	CudaError(cudaMallocManaged(&d_pos,sizeof(int)));
 
-	KernelSwapNonPivot<<<ceil((double)numElements/128),128,0,stream>>>(graph,d_pos,darray,start_offset,end_offset,countOnes);
+	KernelSwapNonPivot<<<ceil((double)numElements/128),128,0,stream>>>(d_pos,darray,start_offset,end_offset,countOnes);
 
 	DEV_SYNC;
 
@@ -63,7 +63,7 @@ void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int* darray,int start_of
 
 	GpuSwap(graph,pos_offset,end_offset);
 
-	gpuErrchk(cudaFree(d_pos));
+	CudaError(cudaFree(d_pos));
 
 	return;
 

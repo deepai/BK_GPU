@@ -151,8 +151,6 @@ int main(int argc, char * argv[]) {
 	//Count of stack = Count Nodes which has Corenumber as Core
 	//
 
-	DEV_SYNC;
-
 /**
 This L array is used to first sort the neighbour array values by Psize
 **/
@@ -200,8 +198,8 @@ This L array is used to first sort the neighbour array values by Psize
 
 	cudaStreamCreate(&stream[0]);
 
-
 	omp_set_num_threads(L.size());
+	//omp_set_num_threads(L.size());
 
 //#pragma omp parallel for
 	for(int i=0;i<L.size();i++)
@@ -217,6 +215,8 @@ This L array is used to first sort the neighbour array values by Psize
 
 	cudaStreamDestroy(stream[0]);
 
+	delete gpuGraph;
+	delete Ng;
 
 	//debug("hello");
 	fclose(fp);

@@ -12,7 +12,7 @@
  * @param stack //input stack
  */
 __global__
-void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,int end_offset,int countOnes,BK_GPU::NeighbourGraph *graph,BK_GPU::GPU_Stack* stack)
+void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,int end_offset,int countOnes,int *data,BK_GPU::GPU_Stack* stack)
 {
   int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -34,7 +34,7 @@ void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,in
     destination = end_offset - (countOnes - currVal) -start_offset;
 
   //Copy the current Element before swapping
-  int currElement=graph->data[tid+start_offset];
+  int currElement=data[tid+start_offset];
 
   d_temp[destination] = currElement;
 
@@ -50,14 +50,14 @@ void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,in
  * @param graph //graph
  */
 __global__
-void KernelRearrangeScatterX(int *d_temp,int start_offset,int end_offset,BK_GPU::NeighbourGraph *graph)
+void KernelRearrangeScatterX(int *d_temp,int start_offset,int end_offset,int *data)
 {
   int tid = threadIdx.x + blockDim.x*blockIdx.x;
 
   if(tid+start_offset > end_offset)
     return;
 
-  graph->data[tid + start_offset] = d_temp[tid];
+  data[tid + start_offset] = d_temp[tid];
 }
 
 extern "C"
@@ -68,15 +68,15 @@ void GpuArrayRearrangeX(BK_GPU::NeighbourGraph *graph,
 
   int* d_temp;
 
-  gpuErrchk(cudaMalloc(&d_temp,sizeof(int)*numElements));
+  CudaError(cudaMalloc(&d_temp,sizeof(int)*numElements));
 
-  kernelRearrangeGatherX<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countOnes,graph,stack);
-
-  DEV_SYNC;
-
-  KernelRearrangeScatterX<<<ceil((double)numElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph);
+  kernelRearrangeGatherX<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countOnes,graph->data,stack);
 
   DEV_SYNC;
 
-  gpuErrchk(cudaFree(d_temp));
+  KernelRearrangeScatterX<<<ceil((double)numElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph->data);
+
+  DEV_SYNC;
+
+  CudaError(cudaFree(d_temp));
 }
