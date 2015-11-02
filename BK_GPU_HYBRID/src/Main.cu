@@ -5,6 +5,7 @@
 #include "Device/GPUStack.h"
 #include "Device/NeighbourGraph.h"
 #include "Device/GPUCSR.h"
+#include "Device/StackElement.h"
 #include "kernels/kernels.cuh"
 #include "Host/BKInstance.h"
 #include "moderngpu/moderngpu.cuh"
@@ -177,10 +178,14 @@ This L array is used to first sort the neighbour array values by Psize
 
 		Ng->copy(nodeIndex++, offset, (int *) g1->neighbourArray[i].data(),Psize,(int *)g1->preDegeneracyVertices[i].data(),Rsize);
 
-		stack[nodeIndex-1]->push(offset,Rsize ,offset + Rsize, Psize - 1 , offset + Rsize + Psize - 1, 1,
-						offset + Rsize,0, 0, true);
+		BK_GPU::StackElement *element=new BK_GPU::StackElement(offset,Rsize ,offset + Rsize, Psize - 1 , offset + Rsize + Psize - 1, 1,
+				0,g1->neighbourArray[i][Psize-1], true);
+
+		stack[nodeIndex-1]->push(element);
 
 		offset += (Psize + Rsize);
+
+		delete element;
 	}
 
 //Sort the graph by currP size
@@ -200,40 +205,49 @@ This L array is used to first sort the neighbour array values by Psize
 //		std::cout << std::endl;
 //	}
 
-
-	cudaStream_t stream[5];
+	//Create required number of cudaStreams
+	cudaStream_t stream[numThreads];
 
 	std::cout<<omp_get_num_threads()<<std::endl;
 
-	for(int i=0;i<5;i++)
+	for(int i=0;i<numThreads;i++)
 		cudaStreamCreate(&stream[i]);
 
-	mgpu::ContextPtr *Contextptr=new mgpu::ContextPtr[5];
-	for(int i=0;i<5;i++)
+	//Create required number of ContextPointers
+	mgpu::ContextPtr *Contextptr=new mgpu::ContextPtr[numThreads];
+	for(int i=0;i<numThreads;i++)
 		Contextptr[i]=mgpu::CreateCudaDeviceAttachStream(stream[i]);
 
-
+	//MultiThreaded Application
 	#pragma omp parallel for
 	for(int i=0;i<L.size();i++)
 	{
-		int tid=omp_get_thread_num();
+		//ThreadId of each omp thread starting from 0.
+		int threadIdx=omp_get_thread_num();
 		//printf("tid is %d\n",tid);
 
-		int threadIdx=tid;
-
-		stack[i]->attachStream(stream[tid]);
-
+		//Instance variable reference. Instance variable is responsible to find Cliques starting with a vertex.
 		BK_GPU::BKInstance *instance;
 
-		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[threadIdx],Contextptr[tid]);
-			//	clear
+		//Make an object corresponding to the instance.
+		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[threadIdx],Contextptr[threadIdx]);
+
+		//Invoke the RunCliqueFinder Method.
 		instance->RunCliqueFinder(i);
 
+		//Wait till all resources are freed within the stream.
+		cudaStreamSynchronize(stream[threadIdx]);
+
+		//make the reference empty.
 		instance = NULL;
 	}
 
-	for(int i=0;i<5;i++)
+	//Destroy the streams.
+	for(int i=0;i<numThreads;i++)
+	{
 			cudaStreamDestroy(stream[i]);
+			//Contextptr[i]->Release();
+	}
 
 	//cudaStreamDestroy(stream[0]);
 

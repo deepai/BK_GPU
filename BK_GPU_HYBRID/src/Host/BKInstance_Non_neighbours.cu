@@ -30,9 +30,9 @@ namespace BK_GPU {
 void BKInstance::nextNonPivot()
 {
 	//Obtain the TopElement
-	topElement=stack->topElement();
+	stack->topElement(&topElement);
 
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
+	//CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 	//obtain the pivot element
 	int pivot=topElement.pivot;
@@ -163,10 +163,9 @@ void BKInstance::nextNonPivot()
 
 		//CudaError(cudaStreamSynchronize(*(this->Stream)));
 
-		stack->push(topElement.beginX, topElement.currXSize, topElement.beginP,
-					topElement.currPSize, topElement.beginR, topElement.currRSize, topElement.pivot,topElement.trackerSize, non_neighbours, true);
+		stack->push(&topElement);
 
-		CudaError(cudaStreamSynchronize(*(this->Stream)));
+		//CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 	}
 

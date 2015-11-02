@@ -66,6 +66,9 @@ void GpuArrayRearrangeX(BK_GPU::NeighbourGraph *graph,
 {
   int numElements = end_offset - start_offset + 1;
 
+  if(numElements < 2)
+	  return;
+
   int* d_temp;
 
   CudaError(cudaMalloc(&d_temp,sizeof(int)*numElements));

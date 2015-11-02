@@ -37,6 +37,7 @@
 								<option id="nvcc.compiler.usefastmath.317274571" name="Make use of fast math library (-use_fast_math)" superClass="nvcc.compiler.usefastmath" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.compileroptions.1053618672" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions" valueType="stringList">
 									<listOptionValue builtIn="false" value="-fopenmp"/>
+									<listOptionValue builtIn="false" value="-lineinfo"/>
 								</option>
 								<inputType id="nvcc.compiler.input.cu.588000411" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1201784592" superClass="nvcc.compiler.input.cpp"/>

@@ -24,27 +24,12 @@ public:
 	int trackerSize;
 
 	int pivot;
-	int remainingNonNeighbour;
 	bool direction; //true indicates forward and false indicates backward
 
+	StackElement(int beginX,int currXSize,int beginP,int currPSize,int beginR,int currRSize,int trackerSize,int pivot,int direction);
 	StackElement();
 	~StackElement();
 
-	__host__ __device__
-	StackElement & operator= (const StackElement& element)
-	{
-		this->beginP = element.beginP;
-		this->beginR = element.beginR;
-		this->beginX = element.beginX;
-		this->currPSize = element.currPSize;
-		this->currRSize = element.currRSize;
-		this->currXSize = element.currXSize;
-		this->direction = element.direction;
-		this->pivot = element.pivot;
-		this->trackerSize = element.trackerSize;
-		this->remainingNonNeighbour = element.remainingNonNeighbour;
-		return *this;
-	}
 
 	__host__
 	void printconfig()

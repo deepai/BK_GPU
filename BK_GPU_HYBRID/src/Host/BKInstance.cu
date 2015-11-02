@@ -24,7 +24,8 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 	this->Ng = Ng; 								//Neighbor graph allocated in Device memory
 	this->gpuGraph = gpuGraph; 					//CSR Graph allocated in Device memory
 	this->stack = stack; 						//Stack for the current Clique , allocated in the device memory
-	this->topElement = stack->topElement(); 	//StackElement resident in the CPU memory
+
+	stack->topElement(&topElement); 	//StackElement resident in the CPU memory
 
 	this->Stream= &stream;						//cudastream
 
@@ -35,11 +36,8 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 
 	this->host_graph = host_graph;				//Graph allocated in the host memory
 
-	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize); //This device resident is used to keep a track of non_neighbours for a given evalution of BK
+	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize,stream); //This device resident is used to keep a track of non_neighbours for a given evalution of BK
 
-	cudaStreamAttachMemAsync(stream,tracker);
-
-	cudaStreamSynchronize(stream);
 }
 
 /**
@@ -72,7 +70,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	size_t d_temp_size = sizeof(unsigned) * currP * 2; //size of auxillary array is 2*(X+P)
 
 	//Allocate Auxillary Array
-	CudaError(cudaMallocManaged(&d_temp_storage, sizeof(unsigned)* 2 * (currP + currX)));
+	CudaError(cudaMalloc(&d_temp_storage, sizeof(unsigned)* 2 * (currP + currX)));
 
 	//Point to the unsorted input data (i.e. P Array in the device graph)
 	unsigned int *d_unSorted = (unsigned *)(Ng->data) + topElement.beginP;
@@ -83,15 +81,13 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	unsigned int *hptr = new unsigned[currP];
 
 	//Kernel to copy the current P array to the host in the hptr array.
-	GpuCopyOffsetAddresses(Ng, stack, gpuGraph, hptr, currP,*(this->Stream));
+	GpuCopyOffsetAddresses(Ng, topElement.beginP, gpuGraph, hptr, currP,*(this->Stream));
 
 	//Various uses of dptr pointer
 	unsigned int* dptr;
 
 	//set a maximum size of 2*(currP + currX)
 	CudaError(cudaMalloc(&dptr, sizeof(int) * 2 *(currP + currX)));
-
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 	//DEV_SYNC;
 
@@ -241,7 +237,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 			CudaError(cudaFree(ptr));
 
-			DEV_SYNC;
+			//DEV_SYNC;
 		}
 
 		/***
@@ -254,26 +250,17 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 		topElement.currXSize = NeighboursinX;
 	}
-
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
-
 	int trackerSize = tracker->size() ;
 
-	stack->push(topElement.beginX, topElement.currXSize, topElement.beginP,
-			newPsize, newBeginR, newRsize, hptr[max_index],trackerSize, non_neighbours, true);
-
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
-
+	//CudaError(cudaStreamSynchronize(*(this->Stream)));
 	topElement.beginR = newBeginR;
 	topElement.currPSize = newPsize;
 	topElement.currRSize = newRsize;
 	topElement.direction = true;
 	topElement.pivot = hptr[max_index];
-	topElement.remainingNonNeighbour = non_neighbours;
+	topElement.trackerSize = trackerSize;
 
-	//debug(max_index, hptr[max_index], numNeighbours);
-
-	//debug(dptr[0],dptr[1],dptr[2],dptr[3]);
+	stack->push(&topElement);
 
 	/**Free the pointers **/
 	CudaError(cudaFree(d_temp_storage));
@@ -303,9 +290,9 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 void BKInstance::moveToX()
 {
 	//Update the topElement.
-	topElement=stack->topElement();
+	stack->topElement(&topElement);
 
-	secondElement=stack->secondElement();
+	stack->secondElement(&secondElement);
 
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -353,31 +340,29 @@ void BKInstance::moveToX()
 	{
 		int currX=topElement.currXSize;
 
-		void *aux_ptr;
-		size_t aux_size=sizeof(uint)*2*currX;
-
-		CudaError(cudaMalloc(&aux_ptr,aux_size));
-
-		DEV_SYNC;
+		void *aux_ptr=NULL;
+		size_t aux_size=0;
 
 		int *d_in=Ng->data + topElement.beginX;
 		int *d_out=d_in;
 
+		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
+
+		CudaError(cudaMalloc(&aux_ptr,aux_size));
+
 		//Sort the array.
-		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(uint)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
+
+		//CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 		CudaError(cudaFree(aux_ptr));
 	}
-
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
-
 	//Pop the values of the previous stack
 	stack->pop();
 
 	//Push the new configuration values into the stack.
-	stack->push(topElement.beginX,topElement.currXSize,topElement.beginP,topElement.currPSize,topElement.beginR,topElement.currRSize,topElement.pivot,topElement.trackerSize+1,topElement.remainingNonNeighbour,topElement.direction);
+	stack->push(&topElement);
 
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
 	//Push the newly moved element into the tracker.
 	tracker->push(topElement.pivot);
 
@@ -416,10 +401,10 @@ void BKInstance::printClique(int CliqueSize,int beginClique)
 void BKInstance::moveFromXtoP()
 {
 	//obtain the top of the stack first.
-	topElement=stack->topElement();
+	stack->topElement(&topElement);
 
 	//obtain the next value of the stack.
-	secondElement=stack->secondElement();
+	stack->secondElement(&secondElement);
 
 	//Current Number of Elements in the tracker.
 	int currTrackerSize = tracker->size();
@@ -510,17 +495,10 @@ void BKInstance::moveFromXtoP()
 	CudaError(cudaFree(d_flags));
 
 	//remove the nodes from the tracker
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
-
 	tracker->pop(NumValuesToMoveFromXToP);
 
 	//pop the current stack value.
 	stack->pop();
-
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
-
-	//CudaError(cudaStreamSynchronize(*(this->Stream)));
-
 
 }
 

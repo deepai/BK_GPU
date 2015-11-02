@@ -11,15 +11,13 @@
  * @param currPSize currPSize
  */
 __global__
-void kernel_CopyAddress(int *data,
-		BK_GPU::GPU_Stack *stack,unsigned int *dptr,int currPSize)
+void kernel_CopyAddress(int *data,int beginP,unsigned int *dptr,int currPSize)
 {
 	int tid=threadIdx.x + blockIdx.x*blockDim.x;
 	if(tid >= currPSize)
 		return;
 	else
 	{
-		int beginP=stack->topElement().beginP;
 		dptr[tid]=data[beginP+tid];
 	}
 }
@@ -34,13 +32,12 @@ void kernel_CopyAddress(int *data,
  * @param dptr array of Pointers
  * @param currPSize currPSize
  */
-void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream)
+void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,int beginP, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream)
 {
 	unsigned int *dptr;
 	CudaError(cudaMalloc(&dptr,sizeof(unsigned int)*currPSize));
 
-	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128,0,stream>>>(graph->data,stack,dptr,currPSize);
+	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128,0,stream>>>(graph->data,beginP,dptr,currPSize);
 
 
 	CudaError(cudaStreamSynchronize(stream));

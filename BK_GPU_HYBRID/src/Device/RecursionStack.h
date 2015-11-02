@@ -18,34 +18,33 @@ public:
 	int top;
 	int *elements;
 
-	RecursionStack(int size);
+	RecursionStack(int size,cudaStream_t &stream);
 
-	void *operator new(size_t len);
-	void* operator new[](std::size_t count);
-	void operator delete(void *ptr);
-
-	__host__ __device__
 	void push(int value)
 	{
-		//top++;
-		elements[top]=value;
+		CudaError(cudaMemcpy(elements+top,&value,sizeof(int),cudaMemcpyHostToDevice));
 		top++;
-		//DEV_SYNC;
 	}
 
-	__host__ __device__
 	void pop(int count)
 	{
 		top-=count;
 		//DEV_SYNC;
 	}
 
-	__host__ __device__
+	int getTopElement()
+	{
+		int topVal;
+
+		CudaError((cudaMemcpy(&topVal,elements+top,sizeof(int),cudaMemcpyHostToDevice)));
+
+		return topVal;
+	}
+
+
 	int size()
 	{
-		int s=top;
-		//DEV_SYNC;
-		return s;
+		return top;
 	}
 
 };

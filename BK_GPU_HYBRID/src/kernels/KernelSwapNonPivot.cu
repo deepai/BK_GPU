@@ -50,13 +50,15 @@ void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int* darray,int start_of
 
 	int *d_pos;
 
-	CudaError(cudaMallocManaged(&d_pos,sizeof(int)));
+	CudaError(cudaMalloc(&d_pos,sizeof(int)));
 
 	KernelSwapNonPivot<<<ceil((double)numElements/128),128,0,stream>>>(d_pos,darray,start_offset,end_offset,countOnes);
 
 	CudaError(cudaStreamSynchronize(stream));
 
-	int pos_offset=*d_pos;
+	int pos_offset;
+
+	CudaError(cudaMemcpy(&pos_offset,d_pos,sizeof(int),cudaMemcpyDeviceToHost));
 
 	if(pos_offset == end_offset)
 		return;

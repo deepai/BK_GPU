@@ -17,8 +17,7 @@
 
 
 extern "C"
-void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,
-		BK_GPU::GPU_Stack *stack, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream);
+void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,int beginP, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream);
 
 extern "C"
 void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,

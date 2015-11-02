@@ -14,44 +14,15 @@ GPU_Stack::GPU_Stack(int size) {
 	// TODO Auto-generated constructor stub
 	top = -1;
 	maxCliqueSize = size;
-	CudaError(cudaMallocManaged(&elements, sizeof(StackElement) * size));
-	DEV_SYNC;
+	CudaError(cudaMalloc(&elements, sizeof(StackElement) * size));
+
 }
 
 
 GPU_Stack::~GPU_Stack() {
 	// TODO Auto-generated destructor stub
+	CudaError(cudaFree(elements));
 }
 
-void *GPU_Stack::operator new(size_t len) {
-	void *ptr;
-	CudaError(cudaMallocManaged(&ptr, sizeof(GPU_Stack) * len));
-	DEV_SYNC;
-	return ptr;
-}
-
-//void *GPU_Stack::operator new[](std::size_t count) {
-//	void *ptr;
-//	CudaError(cudaMallocManaged(&ptr, sizeof(GPU_Stack*) * count))
-//	DEV_SYNC;
-//	return ptr;
-//}
-
-void GPU_Stack::operator delete(void *ptr) {
-	DEV_SYNC;
-	CudaError(cudaFree(ptr));
-}
-
-StackElement& GPU_Stack::operator [](int x) {
-	return elements[x];
-}
-
-void GPU_Stack::attachStream(cudaStream_t &stream)
-{
-	cudaStreamAttachMemAsync(stream,this);
-	cudaStreamAttachMemAsync(stream,this->elements);
-
-	DEV_SYNC;
-}
 
 } /* namespace BK_GPU */
