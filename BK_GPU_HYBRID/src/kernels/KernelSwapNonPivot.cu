@@ -54,14 +54,14 @@ void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int* darray,int start_of
 
 	KernelSwapNonPivot<<<ceil((double)numElements/128),128,0,stream>>>(d_pos,darray,start_offset,end_offset,countOnes);
 
-	DEV_SYNC;
+	CudaError(cudaStreamSynchronize(stream));
 
 	int pos_offset=*d_pos;
 
 	if(pos_offset == end_offset)
 		return;
 
-	GpuSwap(graph,pos_offset,end_offset);
+	GpuSwap(graph,pos_offset,end_offset,stream);
 
 	CudaError(cudaFree(d_pos));
 

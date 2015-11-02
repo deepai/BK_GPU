@@ -72,11 +72,11 @@ void GpuArrayRearrangeX(BK_GPU::NeighbourGraph *graph,
 
   kernelRearrangeGatherX<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countOnes,graph->data,stack);
 
-  DEV_SYNC;
+  CudaError(cudaStreamSynchronize(stream));
 
   KernelRearrangeScatterX<<<ceil((double)numElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph->data);
 
-  DEV_SYNC;
+  CudaError(cudaStreamSynchronize(stream));
 
   CudaError(cudaFree(d_temp));
 }

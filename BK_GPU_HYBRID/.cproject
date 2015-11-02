@@ -27,19 +27,22 @@
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Release"/>
 								</outputEntries>
 							</builder>
-							<tool command="nvcc -fopenm,p" id="nvcc.compiler.base.1622384357" name="NVCC Compiler" superClass="nvcc.compiler.base">
+							<tool command="nvcc" id="nvcc.compiler.base.1622384357" name="NVCC Compiler" superClass="nvcc.compiler.base">
 								<option id="nvcc.compiler.deviceDebug.1629804352" name="Generate device debug information (-G)" superClass="nvcc.compiler.deviceDebug" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.option.level.216673422" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="true" valueType="boolean"/>
 								<option defaultValue="nvcc.compiler.optimization.level.none" id="nvcc.compiler.optimization.level.1582754906" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.1685868087" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
 								<option id="nvcc.compiler.include.paths.1326599842" name="Include paths (-I)" superClass="nvcc.compiler.include.paths"/>
-								<option id="nvcc.compiler.disableWarnings.1096920028" superClass="nvcc.compiler.disableWarnings" value="true" valueType="boolean"/>
-								<option id="nvcc.compiler.usefastmath.317274571" superClass="nvcc.compiler.usefastmath" value="true" valueType="boolean"/>
+								<option id="nvcc.compiler.disableWarnings.1096920028" name="Inhibit all warning messages (-w)" superClass="nvcc.compiler.disableWarnings" value="true" valueType="boolean"/>
+								<option id="nvcc.compiler.usefastmath.317274571" name="Make use of fast math library (-use_fast_math)" superClass="nvcc.compiler.usefastmath" value="true" valueType="boolean"/>
+								<option id="nvcc.compiler.compileroptions.1053618672" name="Preprocessor options (-Xcompiler)" superClass="nvcc.compiler.compileroptions" valueType="stringList">
+									<listOptionValue builtIn="false" value="-fopenmp"/>
+								</option>
 								<inputType id="nvcc.compiler.input.cu.588000411" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1201784592" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.909679282" superClass="nvcc.compiler.input.c"/>
 							</tool>
-							<tool command="nvcc -fopenmp" id="nvcc.linker.base.1581031104" name="NVCC Linker" superClass="nvcc.linker.base">
+							<tool command="nvcc" id="nvcc.linker.base.1581031104" name="NVCC Linker" superClass="nvcc.linker.base">
 								<option id="nvcc.linker.option.libs.1709991143" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="gomp"/>
 								</option>

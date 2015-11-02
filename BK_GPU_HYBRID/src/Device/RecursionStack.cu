@@ -11,22 +11,22 @@ namespace BK_GPU {
 
 RecursionStack::RecursionStack(int size) {
 	// TODO Auto-generated constructor stub
-	top=-1;
+	top=0;
 	CudaError(cudaMallocManaged(&elements,sizeof(int)*size));
-	DEV_SYNC;
+	//DEV_SYNC;
 }
 
 void *RecursionStack::operator new(size_t len) {
 	void *ptr;
 	CudaError(cudaMallocManaged(&ptr, sizeof(RecursionStack) * len));
-	DEV_SYNC;
+	//DEV_SYNC;
 	return ptr;
 }
 
 void *RecursionStack::operator new[](std::size_t count) {
 	void *ptr;
 	CudaError(cudaMallocManaged(&ptr, sizeof(RecursionStack) * count))
-	DEV_SYNC;
+	//DEV_SYNC;
 	return ptr;
 }
 

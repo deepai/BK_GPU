@@ -28,7 +28,6 @@ GPU_CSR::GPU_CSR(Graph &graph) {
 			cudaMemcpy(this->rowOffsets, graph.rowOffset.data(),
 					sizeof(unsigned) * (this->Nodes + 1),
 					cudaMemcpyHostToDevice));
-	DEV_SYNC;
 
 	CudaError(cudaMalloc(&(this->Columns), sizeof(int) * (this->Edges)));
 
@@ -36,7 +35,6 @@ GPU_CSR::GPU_CSR(Graph &graph) {
 			cudaMemcpy(this->Columns, graph.columns.data(),
 					sizeof(unsigned) * (this->Edges), cudaMemcpyHostToDevice));
 
-	DEV_SYNC;
 
 }
 

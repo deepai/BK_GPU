@@ -80,11 +80,11 @@ void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
 
 	kernelRearrangeGatherP<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countZeroes,graph->data,stack);
 
-	DEV_SYNC;
+	CudaError(cudaStreamSynchronize(stream));
 
 	KernelRearrangeScatterP<<<ceil((double)numElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph->data);
 
-	DEV_SYNC;
+	CudaError(cudaStreamSynchronize(stream));
 
 	CudaError(cudaFree(d_temp));
 }

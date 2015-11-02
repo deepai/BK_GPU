@@ -37,8 +37,9 @@ void KernelSwap(int *data,int swapstart,int swapend)
  * @param swapend 2nd swap position
  */
 extern "C"
-void GpuSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend)
+void GpuSwap(BK_GPU::NeighbourGraph *graph,int swapstart,int swapend,cudaStream_t &stream)
 {
-	KernelSwap<<<1,32>>>(graph->data,swapstart,swapend);
-	DEV_SYNC;
+	KernelSwap<<<1,32,0,stream>>>(graph->data,swapstart,swapend);
+
+	CudaError(cudaStreamSynchronize(stream));
 }

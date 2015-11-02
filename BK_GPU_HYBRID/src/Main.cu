@@ -11,7 +11,7 @@
 #include "moderngpu/util/mgpucontext.h"
 #include <iostream>
 #include <algorithm>
-#include "omp.h"
+#include <omp.h>
 
 #include "cub/cub.cuh"
 
@@ -60,12 +60,13 @@ struct listbyPsize
 };
 
 int main(int argc, char * argv[]) {
-	if (argc < 5) {
+	if (argc < 6) {
 		printf(
 				"Argument 1 should be path of the Input Matrix File.\n"
 						"Argument 2 should be 0 for undirected and 1 for directed.\n"
 						"Argument 3 should be 0 for 0 index-based or 1 index based.\n"
-						"Argument 4 should be 0 for mtx format or 1 for normal format.\n");
+						"Argument 4 should be 0 for mtx format or 1 for normal format.\n"
+						"Argument 5 should be #Threads\n");
 		exit(1);
 	}
 
@@ -74,6 +75,9 @@ int main(int argc, char * argv[]) {
 	bool undirected = atoi(argv[2]);
 	bool oneIndexBased = atoi(argv[3]);
 	bool nonmtxFormat = atoi(argv[4]);
+	int numThreads = atoi(argv[5]);
+
+	omp_set_num_threads(numThreads);
 
 	int N, E;
 	int a, b;
@@ -144,7 +148,9 @@ int main(int argc, char * argv[]) {
 
 	BK_GPU::GPU_Stack **stack;
 
-	cudaMallocManaged(&stack, sizeof(BK_GPU::GPU_Stack*) * countofStack);
+	//cudaMallocManaged(&stack, sizeof(BK_GPU::GPU_Stack*) * countofStack);
+
+	stack=new BK_GPU::GPU_Stack*[countofStack];
 
 	DEV_SYNC;
 
@@ -194,26 +200,42 @@ This L array is used to first sort the neighbour array values by Psize
 //		std::cout << std::endl;
 //	}
 
-	cudaStream_t stream[0];
 
-	cudaStreamCreate(&stream[0]);
+	cudaStream_t stream[5];
 
-	omp_set_num_threads(L.size());
-	//omp_set_num_threads(L.size());
+	std::cout<<omp_get_num_threads()<<std::endl;
 
-//#pragma omp parallel for
+	for(int i=0;i<5;i++)
+		cudaStreamCreate(&stream[i]);
+
+	mgpu::ContextPtr *Contextptr=new mgpu::ContextPtr[5];
+	for(int i=0;i<5;i++)
+		Contextptr[i]=mgpu::CreateCudaDeviceAttachStream(stream[i]);
+
+
+	#pragma omp parallel for
 	for(int i=0;i<L.size();i++)
 	{
-		//cudaStreamCreate(&stream[i]);
-		BK_GPU::BKInstance *instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[0]);
-		//	clear
+		int tid=omp_get_thread_num();
+		//printf("tid is %d\n",tid);
+
+		int threadIdx=tid;
+
+		stack[i]->attachStream(stream[tid]);
+
+		BK_GPU::BKInstance *instance;
+
+		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[threadIdx],Contextptr[tid]);
+			//	clear
 		instance->RunCliqueFinder(i);
 
 		instance = NULL;
-		//cudaStreamDestroy(stream[i]);
 	}
 
-	cudaStreamDestroy(stream[0]);
+	for(int i=0;i<5;i++)
+			cudaStreamDestroy(stream[i]);
+
+	//cudaStreamDestroy(stream[0]);
 
 	delete gpuGraph;
 	delete Ng;

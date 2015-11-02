@@ -32,6 +32,8 @@ void BKInstance::nextNonPivot()
 	//Obtain the TopElement
 	topElement=stack->topElement();
 
+	CudaError(cudaStreamSynchronize(*(this->Stream)));
+
 	//obtain the pivot element
 	int pivot=topElement.pivot;
 
@@ -144,7 +146,7 @@ void BKInstance::nextNonPivot()
 
 				CudaError(cudaFree(dptr));
 
-				DEV_SYNC;
+				CudaError(cudaStreamSynchronize(*(this->Stream)));
 			}
 
 			if((NeighboursinX > 0) && (NeighboursinX < topElement.currXSize ))
@@ -159,8 +161,13 @@ void BKInstance::nextNonPivot()
 		topElement.pivot = nextCandidateNode;
 		topElement.direction = true;
 
+		//CudaError(cudaStreamSynchronize(*(this->Stream)));
+
 		stack->push(topElement.beginX, topElement.currXSize, topElement.beginP,
 					topElement.currPSize, topElement.beginR, topElement.currRSize, topElement.pivot,topElement.trackerSize, non_neighbours, true);
+
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
+
 	}
 
 	CudaError(cudaFree(ptr));

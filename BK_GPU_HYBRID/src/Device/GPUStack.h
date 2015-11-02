@@ -23,9 +23,12 @@ public:
 	GPU_Stack(int size);
 	~GPU_Stack();
 	void *operator new(size_t len);
-	void* operator new[](std::size_t count);
+	//void* operator new[](std::size_t count);
 
 	void operator delete(void *ptr);
+
+	__host__
+	void attachStream(cudaStream_t &stream);
 
 	__host__ __device__
 	StackElement& operator[](int x);
@@ -81,7 +84,7 @@ public:
 	void pop() {
 		//DEV_SYNC;
 		top--;
-		DEV_SYNC;
+		//DEV_SYNC;
 	}
 };
 

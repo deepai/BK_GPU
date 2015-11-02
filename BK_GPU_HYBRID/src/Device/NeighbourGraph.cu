@@ -28,7 +28,6 @@ NeighbourGraph::NeighbourGraph(int nodes, int neighbours) {
 	CudaError(cudaMalloc(&dataOffset, sizeof(int) * (this->nodes + 1)));
 	CudaError(cudaMalloc(&data, sizeof(int) * (this->totallength)));
 
-	DEV_SYNC;
 }
 
 

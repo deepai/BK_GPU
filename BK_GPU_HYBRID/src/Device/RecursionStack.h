@@ -27,23 +27,24 @@ public:
 	__host__ __device__
 	void push(int value)
 	{
-		top++;
+		//top++;
 		elements[top]=value;
-		DEV_SYNC;
+		top++;
+		//DEV_SYNC;
 	}
 
 	__host__ __device__
 	void pop(int count)
 	{
 		top-=count;
-		DEV_SYNC;
+		//DEV_SYNC;
 	}
 
 	__host__ __device__
 	int size()
 	{
-		int s=top+1;
-		DEV_SYNC;
+		int s=top;
+		//DEV_SYNC;
 		return s;
 	}
 
