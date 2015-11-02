@@ -503,7 +503,7 @@ void BKInstance::moveFromXtoP()
 }
 
 /**
- * RunCliqueFinder is the main recursive call that emulates the BK_Tomita algorithm in the heteregenous sector.
+ * RunCliqueFinder is the main recursive call that emulates the BK_Tomita algorithm in the Heteregenous setting.
  * This algorithm works independently on a single cuda stream.
  *
  * Further plans to use CPU when currPSize becomes smaller than 128.
@@ -539,26 +539,33 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 	}
 	else {
 
-
+		//obtain the pivot element and adjust the vertices
 		int non_neighbours = processPivot(topElement);
 		int pivot = topElement.pivot;
 
+		//On Expansion the current configuration would only result in a smaller CliqueSize.
 		if(topElement.currRSize + topElement.currPSize > maxCliqueSizeObtained)
 			RunCliqueFinder(CliqueId);
 
+		//Move the pivot element to Reject List.
 		moveToX();
 
+		//While there are non_neighbours, continue invoking the recursive function.
 		while(non_neighbours)
 		{
+			//Obtains the nextNonPivot Element
 			nextNonPivot();
 
+			//On Expansion the current configuration would only result in a smaller CliqueSize.
 			if(topElement.currRSize + topElement.currPSize > maxCliqueSizeObtained)
 				RunCliqueFinder(CliqueId);
 
+			//Move elements back to X.
 			moveToX();
 			non_neighbours--;
 		}
 
+		//Move All elements back from X to P.
 		moveFromXtoP();
 
 		//Bring Back all values used in X into currP array.
