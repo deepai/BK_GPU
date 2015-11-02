@@ -67,24 +67,53 @@ void KernelRearrangeScatterP(int *d_temp,int start_offset,int end_offset,int *da
 	data[tid + start_offset] = d_temp[tid];
 }
 
-
+/**
+ * This method is a wrapper method.This method invokes invokes two kernel i.e. KernelRearrangeGatherP and
+ * kernelRearrangeScatterP.
+ *
+ * The purpose of this method call is to Re-arrange the P segment. We are also given as input a Prefix-Sum of an array consisting of Values
+ * 0 and 1.The Prefix-Sum array is of the same size as that of the current P segment. The indexes having 1 corresponding to the Prefix-Sum array
+ * (i.e subtraction of ith and (i-1)th value is 1) are moved towards the left end i.e. towards the beginP,whereas the values having 0 are moved towards the
+ * right while keeping their relative positions same.
+ *
+ * kernelRearrangeGatherP is used to gather and determine the scatter offset corresponding to each thread and stores it in an auxillary array.
+ * KernelRearrangeScatterP is used to copy back the values into the scatter offset from the auxillary array.
+ *
+ *
+ * @param graph Input Neighbor Graph
+ * @param stack Current Stack
+ * @param InputGraph Graph in CSR format
+ * @param darray Auxillary array to store the scatter offset.
+ * @param start_offset start_offset of the segment
+ * @param end_offset end_offset of the segment
+ * @param countZeroes Number of zeroes present in the segment
+ * @param stream stream
+ */
 extern "C"
 void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
 		BK_GPU::GPU_Stack* stack,BK_GPU::GPU_CSR *InputGraph,unsigned int *darray,int start_offset,int end_offset,int countZeroes,cudaStream_t &stream)
 {
+	//Calculate the number of elements present
 	int numElements = end_offset - start_offset + 1;
 
+	//Used for auxillary storage.
 	int* d_temp;
 
+	//allocate the memory
 	CudaError(cudaMalloc(&d_temp,sizeof(int)*numElements));
 
+	///Invoke the Gather Kernel
 	kernelRearrangeGatherP<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countZeroes,graph->data,stack);
 
+	///Synchronize the previous kernel
 	CudaError(cudaStreamSynchronize(stream));
 
+	///Invoke the Scatter Kernel
 	KernelRearrangeScatterP<<<ceil((double)numElements/128),128,0,stream>>>(d_temp,start_offset,end_offset,graph->data);
 
+	///Synchronize
 	CudaError(cudaStreamSynchronize(stream));
 
+	//Free the memory
 	CudaError(cudaFree(d_temp));
 }
