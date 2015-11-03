@@ -333,14 +333,27 @@ void BKInstance::moveToX()
 	//new position for the X value would be at topElement.beginX + topElement.currXSize
 	int new_posElement = topElement.beginX + topElement.currXSize;
 
-
-
 	//swap the positions
 	GpuSwap(this->Ng,old_posElement,new_posElement,*(this->Stream));
 
 	//If beginP is not swapped, swap it with the old_position to move back the X element into its previous position
 	if(new_posElement!=topElement.beginP)
+	{
+		//swap the positions.
 		GpuSwap(this->Ng,topElement.beginP,old_posElement,*(this->Stream));
+
+		//Since P segment might not extend till beginR, an extra swap might be required to correctly set the values
+		if((topElement.beginP + topElement.currPSize)!= topElement.beginR)
+		{
+			GpuSwap(this->Ng,topElement.beginP+topElement.currPSize,topElement.beginR,*(this->Stream));
+		}
+	}
+
+	//beginR will shift towards right
+	//beginP will shift towards right
+	//currXSize will increase
+	//currRSize will decrease
+	//currPSize remains the same.
 
 	topElement.currXSize++;
 	topElement.currRSize--;
