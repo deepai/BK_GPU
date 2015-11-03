@@ -504,7 +504,7 @@ void BKInstance::moveFromXtoP()
 	 *
 	 */
 	int* d_flags;
-	size_t dflagSize = sizeof(int)*2*(topElement.beginP - topElement.beginX + 1);
+	size_t dflagSize = sizeof(int)*(topElement.beginP - topElement.beginX);
 
 	int *adata=d_in;
 	int acount=NumValuesToMoveFromXToP;
@@ -525,7 +525,7 @@ void BKInstance::moveFromXtoP()
 					adata, acount, bdata, topElement.currXSize, d_flags, d_flags, *Context,
 					&NeighboursinX, &nonNeighboursinX);
 
-	//if bcount > 1 , do an inclusive sum.
+	//if bcount > 1 , do an inclusive sum.|bcount represents the whole X#### segment.
 	if(bcount > 1)
 	{
 		void *d_temp_storage=NULL;size_t d_temp_size=0;
@@ -552,13 +552,30 @@ void BKInstance::moveFromXtoP()
 	//This kernel is used to rearrange back the X values towards P.
 	GpuArrayRearrangeXtoP(Ng,d_flags,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
 
+	CudaError(cudaFree(d_flags));
+
 	d_in=Ng->data + topElement.beginP - NumValuesToMoveFromXToP;
 
 	//Sort the NumValuesToMoveFromXToP + CurrPSize elements.
 	if(topElement.currPSize + NumValuesToMoveFromXToP > 1)
-		CudaError(cub::DeviceRadixSort::SortKeys(d_flags,dflagSize,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+	{
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-	CudaError(cudaFree(d_flags));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
+
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
+	}
+
 
 	//remove the nodes from the tracker
 	tracker->pop(NumValuesToMoveFromXToP);
