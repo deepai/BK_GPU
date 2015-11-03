@@ -29,6 +29,7 @@ namespace BK_GPU {
  */
 void BKInstance::nextNonPivot()
 {
+	int NullValue;
 	//Obtain the TopElement
 	stack->topElement(&topElement);
 
@@ -50,7 +51,7 @@ void BKInstance::nextNonPivot()
 
 	unsigned *ptr;
 
-	size_t requiredSize = sizeof(uint)*2*(topElement.currPSize + topElement.currXSize);
+	size_t requiredSize = sizeof(uint)*(topElement.currPSize);
 
 	//Allocate memory of size 2*currP
 	CudaError(cudaMalloc(&ptr,requiredSize));
@@ -68,11 +69,11 @@ void BKInstance::nextNonPivot()
 					&currNeighbour, &non_neighbours);
 
 	//Locate and swap the last zeroes.
-	GpuArraySwapNonPivot(Ng,(int *)ptr,topElement.beginP,topElement.beginR-1,currNeighbour,*(this->Stream));
+	GpuArraySwapNonPivot(Ng,(int *)ptr,topElement.beginP,topElement.beginP + topElement.currPSize - 2,currNeighbour,*(this->Stream));
 
 	int nextCandidateNode; //= Ng->data[topElement.beginR-1];
 
-	CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginR - 1 ,sizeof(int),cudaMemcpyDeviceToHost));
+	CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginP + topElement.currPSize - 1 ,sizeof(int),cudaMemcpyDeviceToHost));
 
 
 	bdata  = (unsigned *)(Ng->data) + host_graph->rowOffset[nextCandidateNode];
@@ -86,7 +87,21 @@ void BKInstance::nextNonPivot()
 		//if P segment was greater than 2, then sort the remaining P segment.
 		if(topElement.currPSize > 2)
 		{
-			CudaError(cub::DeviceRadixSort::SortKeys(ptr,requiredSize,adata,adata,acount - 1,0,sizeof(uint)*8,*(this->Stream)));
+			void *d_temp_storage=NULL;size_t d_temp_size=0;
+
+			CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,adata,adata,acount,0,sizeof(uint)*8,*(this->Stream)));
+
+			CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+			if(d_temp_storage==NULL)
+						d_temp_storage=&NullValue;
+
+			CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,adata,adata,acount,0,sizeof(uint)*8,*(this->Stream)));
+
+			CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+			if(d_temp_storage!=&NullValue)
+				CudaError(cudaFree(d_temp_storage));
 		}
 
 		//Intersection of currP with the neighbors of nextCandidateNode
@@ -97,17 +112,20 @@ void BKInstance::nextNonPivot()
 		//Do an Inclusive Scan on the intersection values of the adata
 		if(topElement.currPSize > 2)
 		{
-			size_t requiredmemSize;void *dptr=NULL;
+			void *d_temp_storage=NULL;size_t d_temp_size=0;
 
 			//Ist Invocation calculates the amount of memory required for the temporary array.
-			CudaError(cub::DeviceScan::InclusiveSum(dptr,requiredmemSize,ptr,ptr,topElement.currPSize - 1,*(this->Stream)));
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currPSize - 1,*(this->Stream)));
 
-			CudaError(cudaMalloc(&ptr,requiredmemSize));
+			CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
 			//This step does the actual inclusiveSum
-			CudaError(cub::DeviceScan::InclusiveSum(dptr,requiredmemSize,ptr,ptr,topElement.currPSize - 1,*(this->Stream)));
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currPSize - 1,*(this->Stream)));
 
-			CudaError(cudaFree(dptr));
+			CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+			if(d_temp_storage!=&NullValue)
+				CudaError(cudaFree(d_temp_storage));
 
 		}
 
@@ -120,8 +138,13 @@ void BKInstance::nextNonPivot()
 				topElement.beginP, topElement.beginP + topElement.currPSize - 2,non_neighbours,*(this->Stream));
 		}
 
+		CudaError(cudaFree(ptr));
+
 		if(topElement.currXSize!=0)
 		{
+
+			CudaError(cudaMalloc(&ptr,sizeof(int)*topElement.currXSize));
+
 			adata = (unsigned *)(Ng->data) + topElement.beginX;
 			acount = topElement.currXSize;
 
@@ -136,23 +159,26 @@ void BKInstance::nextNonPivot()
 				/***
 				 * * Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
 				 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
-				size_t requiredmemSize = 0; void *dptr=NULL;
+				void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-				CudaError(cub::DeviceScan::InclusiveSum(dptr,requiredmemSize,ptr,ptr,topElement.currXSize,*(this->Stream)));
+				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currXSize,*(this->Stream)));
 
-				CudaError(cudaMalloc(&dptr,requiredmemSize));
+				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-				CudaError(cub::DeviceScan::InclusiveSum(dptr,requiredmemSize,ptr,ptr,topElement.currXSize,*(this->Stream)));
-
-				CudaError(cudaFree(dptr));
+				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currXSize,*(this->Stream)));
 
 				CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+				if(d_temp_storage!=&NullValue)
+					CudaError(cudaFree(d_temp_storage));
 			}
 
 			if((NeighboursinX > 0) && (NeighboursinX < topElement.currXSize ))
 				GpuArrayRearrangeX(Ng,stack,gpuGraph,ptr,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
 
 			topElement.currXSize = NeighboursinX;
+
+			CudaError(cudaFree(ptr));
 		}
 
 		topElement.currPSize = currNeighbour;
@@ -169,7 +195,7 @@ void BKInstance::nextNonPivot()
 
 	}
 
-	CudaError(cudaFree(ptr));
+
 
 }
 

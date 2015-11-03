@@ -56,21 +56,19 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
  *
  * Tracker is updated but contains the previous value itself.
  *
- * @param element
+ * @param element topElement is passed to this method.
  * @return
  */
 int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	/**Step 1: Find the pivot element
+	 *
 	 */
+	//This location is used to point to by a NULL reference
+	int NullValue;
+
 	int currP = topElement.currPSize; //Number of Elements in P
 	int currX = topElement.currXSize; //Number of Elements in X
 	unsigned int *d_Sorted; 		  //Pointer to Neighbour graph of a vertex
-
-	void *d_temp_storage = NULL; 	  //Auxillary array required for temporary Storage
-	size_t d_temp_size = sizeof(unsigned) * currP * 2; //size of auxillary array is 2*(X+P)
-
-	//Allocate Auxillary Array
-	CudaError(cudaMalloc(&d_temp_storage, sizeof(unsigned)* 2 * (currP + currX)));
 
 	//Point to the unsorted input data (i.e. P Array in the device graph)
 	unsigned int *d_unSorted = (unsigned *)(Ng->data) + topElement.beginP;
@@ -83,11 +81,11 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	//Kernel to copy the current P array to the host in the hptr array.
 	GpuCopyOffsetAddresses(Ng, topElement.beginP, gpuGraph, hptr, currP,*(this->Stream));
 
-	//Various uses of dptr pointer
-	unsigned int* dptr;
+	//Various uses of auxillary pointer
+	unsigned int* auxillaryStorage;
 
-	//set a maximum size of 2*(currP + currX)
-	CudaError(cudaMalloc(&dptr, sizeof(int) * 2 *(currP + currX)));
+	//set a maximum size of (curr*P)
+	CudaError(cudaMalloc(&auxillaryStorage, sizeof(int) * (currP)));
 
 	//DEV_SYNC;
 
@@ -119,7 +117,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 		//; //
 
 		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-				adata, acount, bdata, adjacencySize, dptr, dptr, *Context,
+				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, *Context,
 				&currNeighbour, &non_neighbours);
 
 
@@ -132,85 +130,112 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	/**Swap the element(pivot) with the rightMost P element.
 	 * New Size of P
 	 */
-	int endP = this->topElement.beginR - 1;
+	int newBeginR = this->topElement.beginR - 1;
 
-	GpuSwap(this->Ng,max_index+topElement.beginP, endP,*(this->Stream));
+	//Swap the current element with the beginR - 1 position
+	GpuSwap(this->Ng,max_index+topElement.beginP, newBeginR,*(this->Stream));
+
+	//if beginR - 1 is not the end of the current P segment,then swap the current value with the end of the P segment.
+	if(newBeginR != (topElement.beginP + topElement.currPSize - 1) )
+	{
+		GpuSwap(this->Ng,max_index + topElement.beginP,topElement.beginP + topElement.currPSize - 1,*(this->Stream));
+	}
 
 	d_unSorted = d_Sorted;
 //
+	//Sort the P segment is currPsize > 2
 	if(currP > 2 )
+	{
+		//pointer and size variable to allocate temporary array.
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
+
+		//One call to prefill the d_temp_size with required memory size.
 		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
 						d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,*(this->Stream)));
 
+		//Allocate appropiate memory for d_temp_storage required for radixSort.
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-	//cudaStreamSynchronize(*(this->Stream));
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
 
-	int newBeginR = topElement.beginR - 1;
+		//Perform the actual Radix Sort.
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
+								d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,*(this->Stream)));
+
+		//Synchronize the stream
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+		//Free memory.
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
+
+	}
+
+	//Rsize is incremented by 1.
 	int newRsize = topElement.currRSize + 1;
 
-
-	//adjacency size of the neighbour array.
+	//adjacency size of the neighbor array.
 	int adjacencySize = host_graph->rowOffset[hptr[max_index] + 1]
 			- host_graph->rowOffset[hptr[max_index]];
 
-	//pointer to the beginning of the adjancy list for the maximum value
+	//pointer to the beginning of the adjacency list for the maximum value.
 	unsigned *bdata = gpuGraph->Columns + host_graph->rowOffset[hptr[max_index]];
 
-	//This calculates the number of remaining non-neighbours of pivot.
+	//This calculates the number of remaining non-neighbors of pivot.
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-			adata, acount - 1, bdata, adjacencySize, dptr, dptr, *Context,
+			adata, acount - 1, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, *Context,
 			&currNeighbour, &non_neighbours);
 
 	int newPsize = currNeighbour;
 
-	/**
-	 * //Do a Scan on the current dptr array.
-	 * //thrust::inclusive_scan(dptr, dptr + currP - 1, dptr);
-	 */
-
+	//Only if the P segment size is greater than 2, do an Inclusive Sum.
 	if(currP > 2)
 	{
-		size_t requiredmemSize;void *ptr=NULL;
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
 		//Ist Invocation calculates the amount of memory required for the temporary array.
-		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currP - 1,*(this->Stream)));
+		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currP - 1,*(this->Stream)));
 
-		CudaError(cudaMalloc(&ptr,requiredmemSize));
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
 
 		//This step does the actual inclusiveSum
-		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currP - 1,*(this->Stream)));
+		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currP - 1,*(this->Stream)));
 
-		CudaError(cudaFree(ptr));
+		//Synchronize the stream
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+		//Free the allocated memory.
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
 	}
 
-	//cudaStreamSynchronize(*(this->Stream));
-
-
+	//Obtain the count of Non_Neighbours of the pivot.
 	non_neighbours = currP - 1 - currNeighbour;
 
 	//call Kernel Here to re-arrange P elements
 	if((currNeighbour>0) && (currNeighbour < (currP-1)))
 	{
-		GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, dptr,
+		GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, auxillaryStorage,
 			topElement.beginP, topElement.beginP + currP - 2,non_neighbours,*(this->Stream));
 	}
+
+	CudaError(cudaFree(auxillaryStorage));
 
 	//Repeat the steps for currX.
 	//Intersection with X
 
 	if (currX != 0) 
 	{
-		d_temp_size = 2 * currX * sizeof(int);
+		//allocate memory for auxiliary space for X arrays
+		CudaError(cudaMalloc(&auxillaryStorage, sizeof(int) * (currX)));
 
 		//Pointer to the CurrX Values
 		d_unSorted = (unsigned *)(Ng->data) + topElement.beginX;
 		d_Sorted = d_unSorted;
-
-		//Output CurrX sorted into
-		if(currX > 1)
-			CudaError(
-				cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
-						d_unSorted, d_Sorted, currX,0,sizeof(uint)*8,*(this->Stream)));
 
 		adata = d_Sorted;
 		int acount = topElement.currXSize;
@@ -218,7 +243,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 		int NeighboursinX, nonNeighboursinX;
 
 		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-				adata, acount, bdata, adjacencySize, dptr, dptr, *Context,
+				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, *Context,
 				&NeighboursinX, &nonNeighboursinX);
 
 		//Scan only if currX size is greater than 1.
@@ -227,15 +252,21 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 			/***
 			 * * Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
 			 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
-			size_t requiredmemSize = 0; void *ptr=NULL;
+			void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-			CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currX,*(this->Stream)));
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currX,*(this->Stream)));
 
-			CudaError(cudaMalloc(&ptr,requiredmemSize));
+			CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-			CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredmemSize,dptr,dptr,currX,*(this->Stream)));
+			if(d_temp_storage==NULL)
+				d_temp_storage=&NullValue;
 
-			CudaError(cudaFree(ptr));
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currX,*(this->Stream)));
+
+			CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+			if(d_temp_storage!=&NullValue)
+				CudaError(cudaFree(d_temp_storage));
 
 			//DEV_SYNC;
 		}
@@ -246,9 +277,11 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 
 		if((NeighboursinX > 0) && (NeighboursinX < currX ))
-			GpuArrayRearrangeX(Ng,stack,gpuGraph,dptr,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
+			GpuArrayRearrangeX(Ng,stack,gpuGraph,auxillaryStorage,topElement.beginX,topElement.beginX + topElement.currXSize - 1,NeighboursinX,*(this->Stream));
 
 		topElement.currXSize = NeighboursinX;
+
+		CudaError(cudaFree(auxillaryStorage));
 	}
 	int trackerSize = tracker->size() ;
 
@@ -263,9 +296,6 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	stack->push(&topElement);
 
 	/**Free the pointers **/
-	CudaError(cudaFree(d_temp_storage));
-	CudaError(cudaFree(dptr));
-
 
 	delete[] hptr;
 
@@ -280,7 +310,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
  * is moved to value at position beginX + currX -1
  *
  * The X segment is increased by 1,the R segment is decreased by 1.
- * beginP is shifted by 1 to accomodate the new X.
+ * beginP is shifted by 1 to accommodate the new X.
  * begin R is hence also shifted by 1.
  *
  * Both X and P Arrays are Sorted post execution of this method.
@@ -289,6 +319,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
  */
 void BKInstance::moveToX()
 {
+	int NullValue;
 	//Update the topElement.
 	stack->topElement(&topElement);
 
@@ -321,18 +352,25 @@ void BKInstance::moveToX()
 	{
 		int currP=topElement.currPSize;
 
-		void *aux_ptr;
-		size_t aux_size=sizeof(uint)*2*currP;
-
-		CudaError(cudaMalloc(&aux_ptr,aux_size));
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
 		int *d_in=Ng->data + topElement.beginP;
 		int *d_out=d_in;
 
-		//Sort the array.
-		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
 
-		CudaError(cudaFree(aux_ptr));
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
+
+		//Sort the array.
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
+
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
 	}
 
 	//Sort if currXSize > 1
@@ -340,22 +378,25 @@ void BKInstance::moveToX()
 	{
 		int currX=topElement.currXSize;
 
-		void *aux_ptr=NULL;
-		size_t aux_size=0;
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
 		int *d_in=Ng->data + topElement.beginX;
 		int *d_out=d_in;
 
-		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
 
-		CudaError(cudaMalloc(&aux_ptr,aux_size));
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
 
 		//Sort the array.
-		CudaError(cub::DeviceRadixSort::SortKeys(aux_ptr,aux_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
 
-		//CudaError(cudaStreamSynchronize(*(this->Stream)));
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
 
-		CudaError(cudaFree(aux_ptr));
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
 	}
 	//Pop the values of the previous stack
 	stack->pop();
@@ -366,7 +407,7 @@ void BKInstance::moveToX()
 	//Push the newly moved element into the tracker.
 	tracker->push(topElement.pivot);
 
-	CudaError(cudaStreamSynchronize(*(this->Stream)));
+	//CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 }
 
@@ -400,6 +441,7 @@ void BKInstance::printClique(int CliqueSize,int beginClique)
  */
 void BKInstance::moveFromXtoP()
 {
+	int NullValue;
 	//obtain the top of the stack first.
 	stack->topElement(&topElement);
 
@@ -422,17 +464,23 @@ void BKInstance::moveFromXtoP()
 	//Sorting is done only if NumValues > 1
 	if(NumValuesToMoveFromXToP > 1)
 	{
-		void *ptr;
-		size_t reserved_space=sizeof(int)*currTrackerSize*2;
+		//void *ptr;
+		void *d_temp_storage=NULL; size_t d_temp_size=0;
 
-		CudaError(cudaMalloc(&ptr,reserved_space));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
 
 		//Sort the Xvalues
-		CudaError(cub::DeviceRadixSort::SortKeys(ptr,reserved_space,d_in,d_out,NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
 
-		CudaError(cudaFree(ptr));
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
 
-		//CudaError(cudaStreamSynchronize(*(this->Stream)));
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
 
 	}
 
@@ -467,17 +515,22 @@ void BKInstance::moveFromXtoP()
 	//if bcount > 1 , do an inclusive sum.
 	if(bcount > 1)
 	{
-		void *ptr=NULL;
-		size_t requiredSpace;
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
 		//Inclusive Sum
-		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
+		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,d_flags,d_flags,bcount,*(this->Stream)));
 
-		CudaError(cudaMalloc(&ptr,requiredSpace));
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-		CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredSpace,d_flags,d_flags,bcount,*(this->Stream)));
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
 
-		CudaError(cudaFree(ptr));
+		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,d_flags,d_flags,bcount,*(this->Stream)));
+
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
 
 	}
 

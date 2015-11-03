@@ -23,27 +23,18 @@ void kernel_CopyAddress(int *data,int beginP,unsigned int *dptr,int currPSize)
 }
 
 /**
- * A wrapper function that invokes the kernel which contains kernels to copy the addresses of the neighbours starting
- * address.
+ * A function that copies the currentP segment in the host memory.
  *
  * @param graph Neighbour graph
- * @param stack Stack
+ * @param beginP Starting location of P segment
  * @param InputGraph Input Graph in CSR format
  * @param dptr array of Pointers
  * @param currPSize currPSize
  */
 void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,int beginP, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream)
 {
-	unsigned int *dptr;
-	CudaError(cudaMalloc(&dptr,sizeof(unsigned int)*currPSize));
-
-	kernel_CopyAddress<<<(ceil((double)currPSize/128)),128,0,stream>>>(graph->data,beginP,dptr,currPSize);
-
-
 	CudaError(cudaStreamSynchronize(stream));
-
 	//Copy back the values from the dptr to host memory
-	CudaError(cudaMemcpy(host,dptr,sizeof(unsigned int )*currPSize,cudaMemcpyDeviceToHost));
+	CudaError(cudaMemcpy(host,graph->data + beginP, sizeof(unsigned int )*currPSize,cudaMemcpyDeviceToHost));
 
-	CudaError(cudaFree(dptr));
 }

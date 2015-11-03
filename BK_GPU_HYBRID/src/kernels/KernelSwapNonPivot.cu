@@ -48,6 +48,9 @@ void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int* darray,int start_of
 {
 	int numElements = end_offset - start_offset + 1;
 
+	if(numElements < 2)
+		return;
+
 	int *d_pos;
 
 	CudaError(cudaMalloc(&d_pos,sizeof(int)));
