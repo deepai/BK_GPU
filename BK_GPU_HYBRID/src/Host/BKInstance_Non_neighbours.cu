@@ -49,12 +49,12 @@ void BKInstance::nextNonPivot()
 	unsigned int *adata = (unsigned *)(Ng->data) +topElement.beginP;
 	int  acount = topElement.currPSize;
 
-	unsigned *auxillary;
+	unsigned *ptr;
 
 	size_t requiredSize = sizeof(uint)*(topElement.currPSize);
 
 	//Allocate memory of size 2*currP
-	CudaError(cudaMalloc(&auxillary,requiredSize));
+	CudaError(cudaMalloc(&ptr,requiredSize));
 
 //	//Sort P segment once
 //	if(topElement.currPSize > 1)
@@ -62,22 +62,19 @@ void BKInstance::nextNonPivot()
 
 	int currNeighbour,non_neighbours;
 
-	//This sorted search is used to know the values which are non-neighbors with respect to pivot.
+	//This sorted search is used to know the values which are non-neighbours with respect to pivot.
 	//This values are indicated with 0s
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-					adata, acount, bdata, bcount, auxillary, auxillary, *Context,
+					adata, acount, bdata, bcount, ptr, ptr, *Context,
 					&currNeighbour, &non_neighbours);
 
 	//Locate and swap the last zeroes.
-	GpuArraySwapNonPivot(Ng,(int *)auxillary,topElement.beginP,topElement.beginP + topElement.currPSize - 1,currNeighbour,*(this->Stream));
+	GpuArraySwapNonPivot(Ng,(int *)ptr,topElement.beginP,topElement.beginP + topElement.currPSize - 2,currNeighbour,*(this->Stream));
 
 	int nextCandidateNode; //= Ng->data[topElement.beginR-1];
 
 	CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginP + topElement.currPSize - 1 ,sizeof(int),cudaMemcpyDeviceToHost));
 
-	//Swap the last P value with beginR - 1
-	if((topElement.beginP + topElement.currPSize)!=topElement.beginR)
-		GpuSwap(Ng,topElement.beginP + topElement.currPSize - 1,topElement.beginR - 1,*(this->Stream));
 
 	bdata  = (unsigned *)(Ng->data) + host_graph->rowOffset[nextCandidateNode];
 	bcount = host_graph->rowOffset[nextCandidateNode+1] - host_graph->rowOffset[nextCandidateNode];
@@ -109,7 +106,7 @@ void BKInstance::nextNonPivot()
 
 		//Intersection of currP with the neighbors of nextCandidateNode
 		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-							adata, acount, bdata, bcount, auxillary, auxillary, *Context,
+							adata, acount, bdata, bcount, ptr, ptr, *Context,
 							&currNeighbour, &non_neighbours);
 
 		//Do an Inclusive Scan on the intersection values of the adata
@@ -118,12 +115,12 @@ void BKInstance::nextNonPivot()
 			void *d_temp_storage=NULL;size_t d_temp_size=0;
 
 			//Ist Invocation calculates the amount of memory required for the temporary array.
-			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillary,auxillary,topElement.currPSize - 1,*(this->Stream)));
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currPSize - 1,*(this->Stream)));
 
 			CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
 			//This step does the actual inclusiveSum
-			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillary,auxillary,topElement.currPSize - 1,*(this->Stream)));
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currPSize - 1,*(this->Stream)));
 
 			CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -137,16 +134,16 @@ void BKInstance::nextNonPivot()
 
 		if((currNeighbour>0) && (currNeighbour < (topElement.currPSize - 1)))
 		{
-			GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, auxillary,
+			GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, ptr,
 				topElement.beginP, topElement.beginP + topElement.currPSize - 2,non_neighbours,*(this->Stream));
 		}
 
-		CudaError(cudaFree(auxillary));
+		CudaError(cudaFree(ptr));
 
 		if(topElement.currXSize!=0)
 		{
 
-			CudaError(cudaMalloc(&auxillary,sizeof(int)*topElement.currXSize));
+			CudaError(cudaMalloc(&ptr,sizeof(int)*topElement.currXSize));
 
 			adata = (unsigned *)(Ng->data) + topElement.beginX;
 			acount = topElement.currXSize;
@@ -154,7 +151,7 @@ void BKInstance::nextNonPivot()
 			int NeighboursinX, nonNeighboursinX;
 
 			SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-							adata, acount, bdata, bcount, auxillary, auxillary, *Context,
+							adata, acount, bdata, bcount, ptr, ptr, *Context,
 							&NeighboursinX, &nonNeighboursinX);
 
 			if(topElement.currXSize > 1)
@@ -164,11 +161,11 @@ void BKInstance::nextNonPivot()
 				 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
 				void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillary,auxillary,topElement.currXSize,*(this->Stream)));
+				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currXSize,*(this->Stream)));
 
 				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillary,auxillary,topElement.currXSize,*(this->Stream)));
+				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,ptr,ptr,topElement.currXSize,*(this->Stream)));
 
 				CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -177,11 +174,11 @@ void BKInstance::nextNonPivot()
 			}
 
 			if((NeighboursinX > 0) && (NeighboursinX < topElement.currXSize ))
-				GpuArrayRearrangeX(Ng,stack,gpuGraph,auxillary,topElement.beginX,topElement.beginX + topElement.currXSize - 1,NeighboursinX,*(this->Stream));
+				GpuArrayRearrangeX(Ng,stack,gpuGraph,ptr,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
 
 			topElement.currXSize = NeighboursinX;
 
-			CudaError(cudaFree(auxillary));
+			CudaError(cudaFree(ptr));
 		}
 
 		topElement.currPSize = currNeighbour;
