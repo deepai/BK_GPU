@@ -17,7 +17,7 @@ namespace BK_GPU {
 
 
 BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
-		BK_GPU::NeighbourGraph *Ng, BK_GPU::GPU_Stack *stack,cudaStream_t &stream,mgpu::ContextPtr context) {
+		BK_GPU::NeighbourGraph *Ng, BK_GPU::GPU_Stack *stack,cudaStream_t &stream,mgpu::ContextPtr *context,int numThreads) {
 
 	this->maxCliqueSizeObtained = 1;
 	// TODO Auto-generated constructor stub
@@ -29,7 +29,7 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 
 	this->Stream= &stream;						//cudastream
 
-
+	this->MaxThreads = numThreads;
 
 	this->Context = context;
 
@@ -106,7 +106,11 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	 *  This helps avoid unnecessary computations.
 	 *
 	 */
-	for (int i = 0; i < currP; i++) {
+#pragma omp parallel for
+	for (int i = 1; i < currP; i++) {
+
+		int threadIdx=omp_get_thread_num();
+
 		int adjacencySize = (host_graph->rowOffset[hptr[i] + 1] - host_graph->rowOffset[hptr[i]]);
 
 		//std::cout << adjacencySize << ", " << host_graph->rowOffset[hptr[i] + 1] << " " << host_graph->rowOffset[hptr[i]]<< std::endl;
@@ -117,14 +121,17 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 		//; //
 
 		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, *Context,
+				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage,*(Context[threadIdx]),
 				&currNeighbour, &non_neighbours);
 
 
+#pragma omp critical
+{
 		if (currNeighbour > numNeighbours) {
 			max_index = i;
 			numNeighbours = currNeighbour;
 		}
+}
 	}
 
 	/**Swap the element(pivot) with the rightMost P element.
@@ -184,7 +191,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 	//This calculates the number of remaining non-neighbors of pivot.
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-			adata, acount - 1, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, *Context,
+			adata, acount - 1, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, **Context,
 			&currNeighbour, &non_neighbours);
 
 	int newPsize = currNeighbour;
@@ -243,7 +250,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 		int NeighboursinX, nonNeighboursinX;
 
 		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, *Context,
+				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, **Context,
 				&NeighboursinX, &nonNeighboursinX);
 
 		//Scan only if currX size is greater than 1.
@@ -522,7 +529,7 @@ void BKInstance::moveFromXtoP()
 
 	//Do a Sorted Search to check which values in bdata matches with values in  adata.
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-					adata, acount, bdata, topElement.currXSize, d_flags, d_flags, *Context,
+					adata, acount, bdata, topElement.currXSize, d_flags, d_flags, **Context,
 					&NeighboursinX, &nonNeighboursinX);
 
 	//if bcount > 1 , do an inclusive sum.|bcount represents the whole X#### segment.

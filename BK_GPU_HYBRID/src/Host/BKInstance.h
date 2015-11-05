@@ -31,11 +31,13 @@ public:
 	BK_GPU::StackElement topElement;
 	BK_GPU::StackElement secondElement;
 	BK_GPU::RecursionStack *tracker;
-	mgpu::ContextPtr Context;
+	mgpu::ContextPtr *Context;
 	Graph *host_graph;
 	cudaStream_t *Stream;
+	mgpu::ContextPtr *Contextptr;
+	int MaxThreads;
 
-	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,cudaStream_t &stream,mgpu::ContextPtr context);
+	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,cudaStream_t &stream,mgpu::ContextPtr *context,int numThreads);
 	void RunCliqueFinder(int CliqueId);
 	int processPivot(BK_GPU::StackElement &element);
 	void printClique(int CliqueSize,int beginClique);

@@ -219,24 +219,26 @@ This L array is used to first sort the neighbour array values by Psize
 		Contextptr[i]=mgpu::CreateCudaDeviceAttachStream(stream[i]);
 
 	//MultiThreaded Application
-	#pragma omp parallel for
+	//#pragma omp parallel for
 	for(int i=0;i<L.size();i++)
 	{
+		if(i==6)
+			break;
 		//ThreadId of each omp thread starting from 0.
-		int threadIdx=omp_get_thread_num();
+		int threadIdx=i;
 		//printf("tid is %d\n",tid);
 
 		//Instance variable reference. Instance variable is responsible to find Cliques starting with a vertex.
 		BK_GPU::BKInstance *instance;
 
 		//Make an object corresponding to the instance.
-		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[threadIdx],Contextptr[threadIdx]);
+		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[0],Contextptr,numThreads);
 
 		//Invoke the RunCliqueFinder Method.
 		instance->RunCliqueFinder(i);
 
 		//Wait till all resources are freed within the stream.
-		cudaStreamSynchronize(stream[threadIdx]);
+		cudaStreamSynchronize(stream[0]);
 
 		//make the reference empty.
 		instance = NULL;

@@ -65,7 +65,7 @@ void BKInstance::nextNonPivot()
 	//This sorted search is used to know the values which are non-neighbours with respect to pivot.
 	//This values are indicated with 0s
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-					adata, acount, bdata, bcount, ptr, ptr, *Context,
+					adata, acount, bdata, bcount, ptr, ptr, **Context,
 					&currNeighbour, &non_neighbours);
 
 	//Locate and swap the last zeroes.
@@ -106,7 +106,7 @@ void BKInstance::nextNonPivot()
 
 		//Intersection of currP with the neighbors of nextCandidateNode
 		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-							adata, acount, bdata, bcount, ptr, ptr, *Context,
+							adata, acount, bdata, bcount, ptr, ptr, **Context,
 							&currNeighbour, &non_neighbours);
 
 		//Do an Inclusive Scan on the intersection values of the adata
@@ -151,7 +151,7 @@ void BKInstance::nextNonPivot()
 			int NeighboursinX, nonNeighboursinX;
 
 			SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-							adata, acount, bdata, bcount, ptr, ptr, *Context,
+							adata, acount, bdata, bcount, ptr, ptr, **Context,
 							&NeighboursinX, &nonNeighboursinX);
 
 			if(topElement.currXSize > 1)
