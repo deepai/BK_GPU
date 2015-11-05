@@ -16,4 +16,9 @@ RecursionStack::RecursionStack(int size,cudaStream_t &stream) {
 
 }
 
+RecursionStack::~RecursionStack()
+{
+	CudaError(cudaFree(this->elements));
+}
+
 } /* namespace BK_GPU */

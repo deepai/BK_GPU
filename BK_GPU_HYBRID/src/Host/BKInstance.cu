@@ -38,6 +38,49 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 
 	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize,stream); //This device resident is used to keep a track of non_neighbours for a given evalution of BK
 
+	this->Initialize();
+}
+
+/**
+ * This method is used to calculate the maximum buffer size for auxilliary and working array
+ * It takes the max corresponding to both the Inclusive Sum and Exclusive Sum.
+ */
+void BKInstance::Initialize()
+{
+	void *ptr=NULL;
+	size_t requiredSize=0;
+
+	size_t maxSize=max(topElement.currPSize,topElement.currXSize);
+
+	CudaError(cub::DeviceScan::InclusiveSum(ptr,requiredSize,(int*)ptr,(int*)ptr,maxSize));
+
+	maxSize=max(maxSize,requiredSize);
+
+	CudaError(cub::DeviceRadixSort::SortKeys(ptr,requiredSize,(int*)ptr,(int*)ptr,maxSize));
+
+	maxSize=max(maxSize,requiredSize);
+
+	//Allocate the required memories
+
+	CudaError(cudaMalloc(&(this->mem_auxilliary_P_segment),sizeof(int)*maxSize));
+	CudaError(cudaMalloc(&(this->mem_auxilliary_X_segment),sizeof(int)*maxSize));
+
+	CudaError(cudaMalloc(&(this->mem_Working_P_segment),sizeof(int)*maxSize));
+	CudaError(cudaMalloc(&(this->mem_Working_X_segment),sizeof(int)*maxSize));
+
+	//std::cout << maxSize << std::endl;
+
+}
+
+BKInstance::~BKInstance()
+{
+	delete this->tracker;
+	delete this->stack;
+
+	CudaError(cudaFree(this->mem_Working_P_segment));
+	CudaError(cudaFree(this->mem_Working_X_segment));
+	CudaError(cudaFree(this->mem_auxilliary_P_segment));
+	CudaError(cudaFree(this->mem_auxilliary_X_segment));
 }
 
 /**
