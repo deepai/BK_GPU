@@ -12,7 +12,7 @@
  * @param stack //input stack
  */
 __global__
-void kernelRearrangeGatherP(unsigned int *darray,int *d_temp,int start_offset,int end_offset,int countZeroes,int *data,BK_GPU::GPU_Stack* stack)
+void kernelRearrangeGatherP(unsigned int *darray,unsigned int *d_temp,int start_offset,int end_offset,int countZeroes,unsigned *data,BK_GPU::GPU_Stack* stack)
 {
 	int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -21,10 +21,10 @@ void kernelRearrangeGatherP(unsigned int *darray,int *d_temp,int start_offset,in
 		return;
 
 	//get the current prefixsum value
-	int currVal=darray[tid];
+	unsigned currVal=darray[tid];
 
 	//get the previous prefixSum value
-    int prevVal=(tid==0)?0:darray[tid-1];
+	unsigned prevVal=(tid==0)?0:darray[tid-1];
 
 	int destination; //store destination here
 
@@ -41,7 +41,7 @@ void kernelRearrangeGatherP(unsigned int *darray,int *d_temp,int start_offset,in
 		destination = end_offset - (countZeroes - (tid+1 - currVal)) - start_offset;
 
 	//Copy the current Element before swapping
-	int currElement=data[tid+start_offset];
+	unsigned currElement=data[tid+start_offset];
 
 	d_temp[destination] = currElement;
 
@@ -57,7 +57,7 @@ void kernelRearrangeGatherP(unsigned int *darray,int *d_temp,int start_offset,in
  * @param graph //graph
  */
 __global__
-void KernelRearrangeScatterP(int *d_temp,int start_offset,int end_offset,int *data)
+void KernelRearrangeScatterP(unsigned *d_temp,int start_offset,int end_offset,unsigned *data)
 {
 	int tid = threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -97,10 +97,10 @@ void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
 	int numElements = end_offset - start_offset + 1;
 
 	//Used for auxillary storage.
-	int* d_temp;
+	unsigned* d_temp;
 
 	//allocate the memory
-	CudaError(cudaMalloc(&d_temp,sizeof(int)*numElements));
+	CudaError(cudaMalloc(&d_temp,sizeof(unsigned)*numElements));
 
 	///Invoke the Gather Kernel
 	kernelRearrangeGatherP<<<ceil((double)numElements/128),128,0,stream>>>(darray,d_temp,start_offset,end_offset,countZeroes,graph->data,stack);

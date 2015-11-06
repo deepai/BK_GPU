@@ -35,6 +35,6 @@ void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,int beginP, BK_GPU::GP
 {
 	CudaError(cudaStreamSynchronize(stream));
 	//Copy back the values from the dptr to host memory
-	CudaError(cudaMemcpy(host,graph->data + beginP, sizeof(unsigned int )*currPSize,cudaMemcpyDeviceToHost));
+	CudaError(cudaMemcpy(host,graph->data + beginP, sizeof(unsigned)*currPSize,cudaMemcpyDeviceToHost));
 
 }

@@ -25,8 +25,8 @@ public:
 	int cliqueSize;
 	int nodes;
 	int totallength;
-	int *data;
-	int *dataOffset;
+	unsigned *data;
+	unsigned *dataOffset;
 
 	void copy(int nodeindex, int offset, int *neighbours, int Psize,int *rejectLists,int Rsize);
 

@@ -16,7 +16,7 @@ class RecursionStack {
 public:
 
 	int top;
-	int *elements;
+	unsigned *elements;
 
 	RecursionStack(int size,cudaStream_t &stream);
 

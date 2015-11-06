@@ -14,7 +14,7 @@
  * @param swapend 2nd swap position
  */
 __global__
-void KernelSwap(int *data,int swapstart,int swapend)
+void KernelSwap(unsigned *data,int swapstart,int swapend)
 {
 	__shared__ int val[2];
 
@@ -26,6 +26,8 @@ void KernelSwap(int *data,int swapstart,int swapend)
 	int offset=(1-tid)*swapstart + tid*swapend;
 
 	val[1-tid]=data[offset];
+
+	__syncthreads();
 
 	data[offset] = val[tid];
 }

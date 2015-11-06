@@ -11,9 +11,9 @@
  * @param countOnes
  */
 __global__
-void KernelSwapNonPivot(int *dPos,int* darray,int start_offset,int end_offset,int countOnes)
+void KernelSwapNonPivot(unsigned *dPos,unsigned* darray,int start_offset,int end_offset,int countOnes)
 {
-	__shared__ int pos;
+	__shared__ unsigned pos;
 
 	int numElements = end_offset - start_offset + 1;
 
@@ -29,10 +29,10 @@ void KernelSwapNonPivot(int *dPos,int* darray,int start_offset,int end_offset,in
 		return;
 
 	//get the current prefixsum value
-	int currVal=darray[tid];
+	unsigned currVal=darray[tid];
 
 	if(currVal == 0)
-		atomicMax(&pos,tid);
+		atomicMax(&pos,(unsigned)tid);
 
 	__syncthreads();
 
@@ -44,14 +44,14 @@ void KernelSwapNonPivot(int *dPos,int* darray,int start_offset,int end_offset,in
 }
 
 extern "C"
-void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int* darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream)
+void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,unsigned* darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream)
 {
 	int numElements = end_offset - start_offset + 1;
 
 	if(numElements < 2)
 		return;
 
-	int *d_pos;
+	unsigned *d_pos;
 
 	CudaError(cudaMalloc(&d_pos,sizeof(int)));
 
@@ -59,7 +59,7 @@ void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int* darray,int start_of
 
 	CudaError(cudaStreamSynchronize(stream));
 
-	int pos_offset;
+	unsigned pos_offset;
 
 	CudaError(cudaMemcpy(&pos_offset,d_pos,sizeof(int),cudaMemcpyDeviceToHost));
 

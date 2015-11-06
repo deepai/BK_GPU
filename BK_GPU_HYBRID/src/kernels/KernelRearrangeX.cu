@@ -12,7 +12,7 @@
  * @param stack //input stack
  */
 __global__
-void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,int end_offset,int countOnes,int *data,BK_GPU::GPU_Stack* stack)
+void kernelRearrangeGatherX(unsigned int *darray,unsigned *d_temp,int start_offset,int end_offset,int countOnes,unsigned *data,BK_GPU::GPU_Stack* stack)
 {
   int tid=threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -21,10 +21,10 @@ void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,in
     return;
 
   //get the current prefixsum value
-  int currVal=darray[tid];
+  unsigned currVal=darray[tid];
 
   //get the next prefixsum value
-  int prevVal=(tid==0)?0:darray[tid-1];
+  unsigned prevVal=(tid==0)?0:darray[tid-1];
 
   int destination; //store destination here
 
@@ -34,7 +34,7 @@ void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,in
     destination = end_offset - (countOnes - currVal) -start_offset;
 
   //Copy the current Element before swapping
-  int currElement=data[tid+start_offset];
+  unsigned currElement=data[tid+start_offset];
 
   d_temp[destination] = currElement;
 
@@ -50,7 +50,7 @@ void kernelRearrangeGatherX(unsigned int *darray,int *d_temp,int start_offset,in
  * @param graph //graph
  */
 __global__
-void KernelRearrangeScatterX(int *d_temp,int start_offset,int end_offset,int *data)
+void KernelRearrangeScatterX(unsigned *d_temp,int start_offset,int end_offset,unsigned *data)
 {
   int tid = threadIdx.x + blockDim.x*blockIdx.x;
 
@@ -69,7 +69,7 @@ void GpuArrayRearrangeX(BK_GPU::NeighbourGraph *graph,
   if(numElements < 2)
 	  return;
 
-  int* d_temp;
+  unsigned* d_temp;
 
   CudaError(cudaMalloc(&d_temp,sizeof(int)*numElements));
 

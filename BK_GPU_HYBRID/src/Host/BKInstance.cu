@@ -71,7 +71,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	unsigned int *d_Sorted; 		  //Pointer to Neighbour graph of a vertex
 
 	//Point to the unsorted input data (i.e. P Array in the device graph)
-	unsigned int *d_unSorted = (unsigned *)(Ng->data) + topElement.beginP;
+	unsigned int *d_unSorted = (Ng->data) + topElement.beginP;
 	d_Sorted = d_unSorted;
 
 	//cudaStreamSynchronize(*(this->Stream));
@@ -238,10 +238,10 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	if (currX != 0) 
 	{
 		//allocate memory for auxiliary space for X arrays
-		CudaError(cudaMalloc(&auxillaryStorage, sizeof(int) * (currX)));
+		CudaError(cudaMalloc(&auxillaryStorage, sizeof(unsigned) * (currX)));
 
 		//Pointer to the CurrX Values
-		d_unSorted = (unsigned *)(Ng->data) + topElement.beginX;
+		d_unSorted = (Ng->data) + topElement.beginX;
 		d_Sorted = d_unSorted;
 
 		adata = d_Sorted;
@@ -374,8 +374,8 @@ void BKInstance::moveToX()
 
 		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		int *d_in=Ng->data + topElement.beginP;
-		int *d_out=d_in;
+		unsigned *d_in=Ng->data + topElement.beginP;
+		unsigned *d_out=d_in;
 
 		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
 
@@ -400,8 +400,8 @@ void BKInstance::moveToX()
 
 		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		int *d_in=Ng->data + topElement.beginX;
-		int *d_out=d_in;
+		unsigned *d_in=Ng->data + topElement.beginX;
+		unsigned *d_out=d_in;
 
 		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
 
@@ -477,7 +477,7 @@ void BKInstance::moveFromXtoP()
 	int NumValuesToMoveFromXToP = currTrackerSize - secondElement.trackerSize;
 
 	//Pointer to the tracker elements to sort them.
-	int *d_in=&(tracker->elements[currTrackerSize-NumValuesToMoveFromXToP]),*d_out=d_in;
+	unsigned *d_in=&(tracker->elements[currTrackerSize-NumValuesToMoveFromXToP]),*d_out=d_in;
 
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -510,13 +510,13 @@ void BKInstance::moveFromXtoP()
 	 * Thus left of Segment is X####.
 	 *
 	 */
-	int* d_flags;
+	unsigned* d_flags;
 	size_t dflagSize = sizeof(int)*(topElement.beginP - topElement.beginX);
 
-	int *adata=d_in;
+	unsigned *adata=d_in;
 	int acount=NumValuesToMoveFromXToP;
 
-	int *bdata=Ng->data + topElement.beginX;
+	unsigned *bdata=Ng->data + topElement.beginX;
 	int bcount=topElement.beginP - topElement.beginX; //The size of the bdata array is X####. We need to search it there
 
 	int NeighboursinX,nonNeighboursinX;
@@ -525,7 +525,7 @@ void BKInstance::moveFromXtoP()
 	CudaError(cudaMalloc(&d_flags,dflagSize));
 
 	//Initialize the memory by 0
-	CudaError(cudaMemset(d_flags,0,sizeof(int)*bcount));
+	CudaError(cudaMemset(d_flags,0,sizeof(unsigned)*bcount));
 
 	//Do a Sorted Search to check which values in bdata matches with values in  adata.
 	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
