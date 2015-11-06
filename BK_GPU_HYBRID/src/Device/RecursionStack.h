@@ -20,6 +20,8 @@ public:
 
 	RecursionStack(int size,cudaStream_t &stream);
 
+	~RecursionStack();
+
 	void push(int value)
 	{
 		CudaError(cudaMemcpy(elements+top,&value,sizeof(int),cudaMemcpyHostToDevice));

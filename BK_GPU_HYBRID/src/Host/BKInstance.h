@@ -44,6 +44,12 @@ public:
 	void moveToX();
 	void moveFromXtoP();
 	void nextNonPivot();
+
+	~BKInstance()
+	{
+		delete this->stack;
+		delete this->tracker;
+	}
 };
 
 } /* namespace BK_GPU */

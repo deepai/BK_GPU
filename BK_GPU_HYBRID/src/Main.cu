@@ -239,7 +239,7 @@ This L array is used to first sort the neighbour array values by Psize
 		cudaStreamSynchronize(stream[0]);
 
 		//make the reference empty.
-		instance = NULL;
+		delete instance;
 	}
 
 	//Destroy the streams.
