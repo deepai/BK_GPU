@@ -95,7 +95,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	/** Max Index is used to store the index of value within P
 	 *  Max Index lies between 0 and P-1.
 	 */
-	int max_index;
+	int max_index=0;
 
 	int currNeighbour=0, non_neighbours;
 	int acount = currP;
@@ -165,38 +165,10 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	}
 
 	d_unSorted = d_Sorted;
-//
-	//Sort the P segment is currPsize > 2
-	if(currP > 2 )
-	{
-		//pointer and size variable to allocate temporary array.
-		void *d_temp_storage=NULL;size_t d_temp_size=0;
-
-		//One call to prefill the d_temp_size with required memory size.
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
-						d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,*(this->Stream)));
-
-		//Allocate appropiate memory for d_temp_storage required for radixSort.
-		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
-
-		if(d_temp_storage==NULL)
-			d_temp_storage=&NullValue;
-
-		//Perform the actual Radix Sort.
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
-								d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,*(this->Stream)));
-
-		//Synchronize the stream
-		CudaError(cudaStreamSynchronize(*(this->Stream)));
-
-		//Free memory.
-		if(d_temp_storage!=&NullValue)
-			CudaError(cudaFree(d_temp_storage));
-
-	}
 
 	//Rsize is incremented by 1.
 	int newRsize = topElement.currRSize + 1;
+	int newPsize;
 
 	//adjacency size of the neighbor array.
 	int adjacencySize = host_graph->rowOffset[hptr[max_index] + 1]
@@ -205,107 +177,156 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	//pointer to the beginning of the adjacency list for the maximum value.
 	unsigned *bdata = gpuGraph->Columns + host_graph->rowOffset[hptr[max_index]];
 
-	//This calculates the number of remaining non-neighbors of pivot.
-	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-			adata, acount - 1, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, **Context,
-			&currNeighbour, &non_neighbours);
 
-	int newPsize = currNeighbour;
-
-	//Only if the P segment size is greater than 2, do an Inclusive Sum.
-	if(currP > 2)
+	#pragma omp parallel num_threads(2)
 	{
-		void *d_temp_storage=NULL;size_t d_temp_size=0;
+		int threadId = omp_get_thread_num();
 
-		//Ist Invocation calculates the amount of memory required for the temporary array.
-		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currP - 1,*(this->Stream)));
+		if(threadId == 0)
+		{
+			cudaStream_t currStream = Context[threadId]->Stream();
 
-		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+			if(currP > 2 )
+			{
+				//pointer and size variable to allocate temporary array.
+				void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		if(d_temp_storage==NULL)
-			d_temp_storage=&NullValue;
+				//One call to prefill the d_temp_size with required memory size.
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
+								d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,currStream));
 
-		//This step does the actual inclusiveSum
-		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currP - 1,*(this->Stream)));
+				//Allocate appropiate memory for d_temp_storage required for radixSort.
+				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-		//Synchronize the stream
-		CudaError(cudaStreamSynchronize(*(this->Stream)));
+				if(d_temp_storage==NULL)
+					d_temp_storage=&NullValue;
 
-		//Free the allocated memory.
-		if(d_temp_storage!=&NullValue)
-			CudaError(cudaFree(d_temp_storage));
-	}
+				//Perform the actual Radix Sort.
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage, d_temp_size,
+										d_unSorted, d_Sorted, currP-1,0,sizeof(uint)*8,currStream));
 
-	//Obtain the count of Non_Neighbours of the pivot.
-	non_neighbours = currP - 1 - currNeighbour;
+				//Synchronize the stream
+				CudaError(cudaStreamSynchronize(currStream));
 
-	//call Kernel Here to re-arrange P elements
-	if((currNeighbour>0) && (currNeighbour < (currP-1)))
-	{
-		GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, auxillaryStorage,
-			topElement.beginP, topElement.beginP + currP - 2,non_neighbours,*(this->Stream));
+				//Free memory.
+				if(d_temp_storage!=&NullValue)
+					CudaError(cudaFree(d_temp_storage));
+
+			}
+
+
+
+			//This calculates the number of remaining non-neighbors of pivot.
+			SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
+					adata, acount - 1, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, *(Context[threadId]),
+					&currNeighbour, &non_neighbours);
+
+			CudaError(cudaStreamSynchronize(currStream));
+
+			newPsize = currNeighbour;
+
+			//Only if the P segment size is greater than 2, do an Inclusive Sum.
+			if(currP > 2)
+			{
+				void *d_temp_storage=NULL;size_t d_temp_size=0;
+
+				//Ist Invocation calculates the amount of memory required for the temporary array.
+				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currP - 1,currStream));
+
+				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+				if(d_temp_storage==NULL)
+					d_temp_storage=&NullValue;
+
+				//This step does the actual inclusiveSum
+				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currP - 1,currStream));
+
+				//Synchronize the stream
+				CudaError(cudaStreamSynchronize(currStream));
+
+				//Free the allocated memory.
+				if(d_temp_storage!=&NullValue)
+					CudaError(cudaFree(d_temp_storage));
+			}
+
+			//Obtain the count of Non_Neighbours of the pivot.
+			non_neighbours = currP - 1 - currNeighbour;
+
+			//call Kernel Here to re-arrange P elements
+			if((currNeighbour>0) && (currNeighbour < (currP-1)))
+			{
+				GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, auxillaryStorage,
+					topElement.beginP, topElement.beginP + currP - 2,non_neighbours,currStream);
+			}
+
+
+		}
+		else if(threadId == 1)
+		{
+			//Repeat the steps for currX.
+			//Intersection with X
+			cudaStream_t currStream = Context[threadId]->Stream();
+
+			if (currX != 0)
+			{
+				unsigned *auxStorage;
+
+				//allocate memory for auxiliary space for X arrays
+				CudaError(cudaMalloc(&auxStorage, sizeof(unsigned) * (currX)));
+
+				unsigned *firstData = (Ng->data) + topElement.beginX;;
+				int firstCount = topElement.currXSize;
+
+				int NeighboursinX, nonNeighboursinX;
+
+				SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
+						firstData, firstCount, bdata, adjacencySize, auxStorage, auxStorage, *(Context[threadId]),
+						&NeighboursinX, &nonNeighboursinX);
+
+				CudaError(cudaStreamSynchronize(currStream));
+
+				//Scan only if currX size is greater than 1.
+				if(currX > 1)
+				{
+					/***
+					 * * Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
+					 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
+					void *d_temp_storage=NULL;size_t d_temp_size=0;
+
+					CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxStorage,auxStorage,currX,currStream));
+
+					CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+					if(d_temp_storage==NULL)
+						d_temp_storage=&NullValue;
+
+					CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxStorage,auxStorage,currX,currStream));
+
+					CudaError(cudaStreamSynchronize(Context[threadId]->Stream()));
+
+					if(d_temp_storage!=&NullValue)
+						CudaError(cudaFree(d_temp_storage));
+
+					//DEV_SYNC;
+				}
+
+				/***
+				 * Scan Complete
+				 */
+
+				if((NeighboursinX > 0) && (NeighboursinX < currX ))
+					GpuArrayRearrangeX(Ng,stack,gpuGraph,auxStorage,topElement.beginX,topElement.beginX + topElement.currXSize - 1,NeighboursinX,currStream);
+
+				topElement.currXSize = NeighboursinX;
+
+				CudaError(cudaFree(auxStorage));
+			}
+		}
 	}
 
 	CudaError(cudaFree(auxillaryStorage));
-
-	//Repeat the steps for currX.
-	//Intersection with X
-
-	if (currX != 0) 
-	{
-		//allocate memory for auxiliary space for X arrays
-		CudaError(cudaMalloc(&auxillaryStorage, sizeof(unsigned) * (currX)));
-
-		//Pointer to the CurrX Values
-		d_unSorted = (Ng->data) + topElement.beginX;
-		d_Sorted = d_unSorted;
-
-		adata = d_Sorted;
-		int acount = topElement.currXSize;
-
-		int NeighboursinX, nonNeighboursinX;
-
-		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage, **Context,
-				&NeighboursinX, &nonNeighboursinX);
-
-		//Scan only if currX size is greater than 1.
-		if(currX > 1)
-		{
-			/***
-			 * * Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
-			 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
-			void *d_temp_storage=NULL;size_t d_temp_size=0;
-
-			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currX,*(this->Stream)));
-
-			CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
-
-			if(d_temp_storage==NULL)
-				d_temp_storage=&NullValue;
-
-			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxillaryStorage,auxillaryStorage,currX,*(this->Stream)));
-
-			CudaError(cudaStreamSynchronize(*(this->Stream)));
-
-			if(d_temp_storage!=&NullValue)
-				CudaError(cudaFree(d_temp_storage));
-
-			//DEV_SYNC;
-		}
-
-		/***
-		 * Scan Complete
-		 */
-
-
-		if((NeighboursinX > 0) && (NeighboursinX < currX ))
-			GpuArrayRearrangeX(Ng,stack,gpuGraph,auxillaryStorage,topElement.beginX,topElement.beginX + topElement.currXSize - 1,NeighboursinX,*(this->Stream));
-
-		topElement.currXSize = NeighboursinX;
-
-		CudaError(cudaFree(auxillaryStorage));
-	}
+//
+	//Sort the P segment is currPsize > 2
 	int trackerSize = tracker->size() ;
 
 	//CudaError(cudaStreamSynchronize(*(this->Stream)));
