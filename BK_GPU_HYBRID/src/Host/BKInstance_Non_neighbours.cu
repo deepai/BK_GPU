@@ -69,7 +69,7 @@ void BKInstance::nextNonPivot()
 					&currNeighbour, &non_neighbours);
 
 	//Locate and swap the last zeroes.
-	GpuArraySwapNonPivot(Ng,(int *)ptr,topElement.beginP,topElement.beginP + topElement.currPSize - 2,currNeighbour,*(this->Stream));
+	GpuArraySwapNonPivot(Ng,ptr,topElement.beginP,topElement.beginP + topElement.currPSize - 2,currNeighbour,*(this->Stream));
 
 	int nextCandidateNode; //= Ng->data[topElement.beginR-1];
 

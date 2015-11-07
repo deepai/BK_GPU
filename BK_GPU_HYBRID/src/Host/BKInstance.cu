@@ -95,9 +95,9 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	/** Max Index is used to store the index of value within P
 	 *  Max Index lies between 0 and P-1.
 	 */
-	int max_index, numNeighbours = -1;
+	int max_index;
 
-	int currNeighbour, non_neighbours;
+	int currNeighbour=0, non_neighbours;
 	int acount = currP;
 
 	/** For each value in the P segment. Obtain the count of its neighbors amongst P .
@@ -106,32 +106,48 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	 *  This helps avoid unnecessary computations.
 	 *
 	 */
-#pragma omp parallel for
-	for (int i = 1; i < currP; i++) {
+	int nsize,nonnsize;
+	#pragma omp parallel private(nsize,nonnsize)
+	{
+		int currNeighbourSize=0;
+		int best_index=0;
 
-		int threadIdx=omp_get_thread_num();
+		#pragma omp for nowait
+		for (int i = 1; i < currP; i++)
+		{
 
-		int adjacencySize = (host_graph->rowOffset[hptr[i] + 1] - host_graph->rowOffset[hptr[i]]);
+			int threadIdx=omp_get_thread_num();
 
-		//std::cout << adjacencySize << ", " << host_graph->rowOffset[hptr[i] + 1] << " " << host_graph->rowOffset[hptr[i]]<< std::endl;
+			int adjacencySize = (host_graph->rowOffset[hptr[i] + 1] - host_graph->rowOffset[hptr[i]]);
 
-		unsigned int *bdata =gpuGraph->Columns + host_graph->rowOffset[hptr[i]];
+				//std::cout << adjacencySize << ", " << host_graph->rowOffset[hptr[i] + 1] << " " << host_graph->rowOffset[hptr[i]]<< std::endl;
 
-		//DEV_SYNC
-		//; //
+			unsigned int *bdata =gpuGraph->Columns + host_graph->rowOffset[hptr[i]];
 
-		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-				adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage,*(Context[threadIdx]),
-				&currNeighbour, &non_neighbours);
+				//DEV_SYNC
+				//; //
 
+			SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
+						adata, acount, bdata, adjacencySize, auxillaryStorage, auxillaryStorage,*(Context[threadIdx]),
+						&nsize, &nonnsize);
 
-#pragma omp critical
-{
-		if (currNeighbour > numNeighbours) {
-			max_index = i;
-			numNeighbours = currNeighbour;
+			CudaError(cudaStreamSynchronize(((Context[threadIdx]->Stream()))));
+
+			if(nsize > currNeighbourSize)
+			{
+				currNeighbourSize = nsize;
+				best_index=i;
+			}
 		}
-}
+		#pragma omp critical
+		{
+			if (currNeighbourSize > currNeighbour) {
+				max_index = best_index;
+				currNeighbour = currNeighbourSize;
+			}
+		}
+
+
 	}
 
 	/**Swap the element(pivot) with the rightMost P element.

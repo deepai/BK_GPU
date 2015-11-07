@@ -246,7 +246,7 @@ This L array is used to first sort the neighbour array values by Psize
 	for(int i=0;i<numThreads;i++)
 	{
 			cudaStreamDestroy(stream[i]);
-			//Contextptr[i]->Release();
+			Contextptr[i]->Release();
 	}
 
 	//cudaStreamDestroy(stream[0]);
