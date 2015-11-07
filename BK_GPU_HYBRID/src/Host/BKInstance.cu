@@ -404,56 +404,69 @@ void BKInstance::moveToX()
 	topElement.beginP++;
 	topElement.beginR++;
 
-	//Sort if currPSize > 1
-	if(topElement.currPSize > 1)
+	#pragma omp parallel num_threads(2)
 	{
-		int currP=topElement.currPSize;
+		int threadId = omp_get_thread_num();
 
-		void *d_temp_storage=NULL;size_t d_temp_size=0;
+		if(threadId == 0)
+		{
+			cudaStream_t currStream = Context[threadId]->Stream();
+			//Sort if currPSize > 1
+			if(topElement.currPSize > 1)
+			{
+				int currP=topElement.currPSize;
 
-		unsigned *d_in=Ng->data + topElement.beginP;
-		unsigned *d_out=d_in;
+				void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
+				unsigned *d_in=Ng->data + topElement.beginP;
+				unsigned *d_out=d_in;
 
-		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currP,0,sizeof(uint)*8,currStream));
 
-		if(d_temp_storage==NULL)
-			d_temp_storage=&NullValue;
+				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-		//Sort the array.
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currP,0,sizeof(uint)*8,*(this->Stream)));
+				if(d_temp_storage==NULL)
+					d_temp_storage=&NullValue;
 
-		CudaError(cudaStreamSynchronize(*(this->Stream)));
+				//Sort the array.
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currP,0,sizeof(uint)*8,currStream));
 
-		if(d_temp_storage!=&NullValue)
-			CudaError(cudaFree(d_temp_storage));
-	}
+				CudaError(cudaStreamSynchronize(currStream));
 
-	//Sort if currXSize > 1
-	if(topElement.currXSize > 1)
-	{
-		int currX=topElement.currXSize;
+				if(d_temp_storage!=&NullValue)
+					CudaError(cudaFree(d_temp_storage));
+			}
+		}
+		else
+		{
+			cudaStream_t currStream = Context[threadId]->Stream();
 
-		void *d_temp_storage=NULL;size_t d_temp_size=0;
+			//Sort if currXSize > 1
+			if(topElement.currXSize > 1)
+			{
+				int currX=topElement.currXSize;
 
-		unsigned *d_in=Ng->data + topElement.beginX;
-		unsigned *d_out=d_in;
+				void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
+				unsigned *d_in=Ng->data + topElement.beginX;
+				unsigned *d_out=d_in;
 
-		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currX,0,sizeof(int)*8,currStream));
 
-		if(d_temp_storage==NULL)
-			d_temp_storage=&NullValue;
+				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-		//Sort the array.
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currX,0,sizeof(int)*8,*(this->Stream)));
+				if(d_temp_storage==NULL)
+					d_temp_storage=&NullValue;
 
-		CudaError(cudaStreamSynchronize(*(this->Stream)));
+				//Sort the array.
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_out,currX,0,sizeof(int)*8,currStream));
 
-		if(d_temp_storage!=&NullValue)
-			CudaError(cudaFree(d_temp_storage));
+				CudaError(cudaStreamSynchronize(currStream));
+
+				if(d_temp_storage!=&NullValue)
+					CudaError(cudaFree(d_temp_storage));
+			}
+		}
 	}
 	//Pop the values of the previous stack
 	stack->pop();
