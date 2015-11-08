@@ -370,7 +370,7 @@ void BKInstance::moveToX()
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 	//Old_posElement is the last position of the P array.
-	int old_posElement = topElement.beginR - 1;
+	int old_posElement = topElement.beginR;
 
 	//new position for the X value would be at secondElement.beginX + secondElement.currXSize
 	int new_posElement = topElement.beginX + topElement.currXSize;
@@ -385,9 +385,9 @@ void BKInstance::moveToX()
 		GpuSwap(this->Ng,topElement.beginP,old_posElement,*(this->Stream));
 
 		//Since P segment might not extend till beginR, an extra swap might be required to correctly set the values
-		if((topElement.beginP + topElement.currPSize)!= (topElement.beginR - 1))
+		if((topElement.beginP + topElement.currPSize)!= topElement.beginR)
 		{
-			GpuSwap(this->Ng,topElement.beginP+topElement.currPSize,topElement.beginR - 1,*(this->Stream));
+			GpuSwap(this->Ng,topElement.beginP+topElement.currPSize,topElement.beginR,*(this->Stream));
 		}
 	}
 
@@ -399,7 +399,6 @@ void BKInstance::moveToX()
 
 	topElement.currXSize = topElement.currXSize + 1;
 	topElement.beginP = topElement.beginP + 1;
-	topElement.currPSize = topElement.currPSize - 1;
 
 	//pop the current top of the stack
 	//stack->pop();
@@ -487,8 +486,13 @@ void BKInstance::moveToX()
 void BKInstance::printClique(int CliqueSize,int beginClique)
 {
 #ifdef PRINTCLIQUES
+
+	unsigned *Clique=new unsigned[CliqueSize];
+
+	CudaError(cudaMemcpy(Clique,Ng->data+beginClique,sizeof(unsigned)*CliqueSize,cudaMemcpyDeviceToHost));
+
 	for(int i=0;i<CliqueSize;i++)
-		printf("%d ",Ng->data[beginClique+i]+1);
+		printf("%d ",Clique[i]+1);
 
 	printf("\n");
 #endif
@@ -614,47 +618,59 @@ void BKInstance::moveFromXtoP()
 
 	CudaError(cudaFree(d_flags));
 
-	d_in=Ng->data + secondElement.beginP;
-
-	//Sort the NumValuesToMoveFromXToP + CurrPSize elements = secondElement.currPSize.
-	if(secondElement.currPSize > 1)
+	#pragma omp parallel num_threads(2)
 	{
-		void *d_temp_storage=NULL;size_t d_temp_size=0;
+		int threadId = omp_get_thread_num();
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currPSize,0,sizeof(int)*8,*(this->Stream)));
+		if(threadId == 0)
+		{
+			unsigned *aux_mem_required =Ng->data + secondElement.beginP;
 
-		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+			//Sort the NumValuesToMoveFromXToP + CurrPSize elements = secondElement.currPSize.
+			if(secondElement.currPSize > 1)
+			{
+				void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		if(d_temp_storage==NULL)
-			d_temp_storage=&NullValue;
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,aux_mem_required,aux_mem_required,secondElement.currPSize,0,sizeof(int)*8,*(this->Stream)));
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currPSize,0,sizeof(int)*8,*(this->Stream)));
+				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-		CudaError(cudaStreamSynchronize(*(this->Stream)));
+				if(d_temp_storage==NULL)
+					d_temp_storage=&NullValue;
 
-		if(d_temp_storage!=&NullValue)
-			CudaError(cudaFree(d_temp_storage));
-	}
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,aux_mem_required,aux_mem_required,secondElement.currPSize,0,sizeof(int)*8,*(this->Stream)));
 
-	d_in=Ng->data + secondElement.beginX;
+				CudaError(cudaStreamSynchronize(*(this->Stream)));
 
-	if(secondElement.currXSize > 1)
-	{
-		void *d_temp_storage=NULL;size_t d_temp_size=0;
+				if(d_temp_storage!=&NullValue)
+					CudaError(cudaFree(d_temp_storage));
+			}
+		}
+		else
+		{
+			unsigned *aux_mem_required =Ng->data + secondElement.beginX;
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currXSize,0,sizeof(int)*8,*(this->Stream)));
+			if(secondElement.currXSize > 1)
+			{
+				void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,aux_mem_required,aux_mem_required,secondElement.currXSize,0,sizeof(int)*8,*(this->Stream)));
 
-		if(d_temp_storage==NULL)
-			d_temp_storage=&NullValue;
+				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currXSize,0,sizeof(int)*8,*(this->Stream)));
+				if(d_temp_storage==NULL)
+					d_temp_storage=&NullValue;
 
-		CudaError(cudaStreamSynchronize(*(this->Stream)));
+				CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,aux_mem_required,aux_mem_required,secondElement.currXSize,0,sizeof(int)*8,*(this->Stream)));
 
-		if(d_temp_storage!=&NullValue)
-			CudaError(cudaFree(d_temp_storage));
+				CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+				if(d_temp_storage!=&NullValue)
+					CudaError(cudaFree(d_temp_storage));
+			}
+
+		}
+
 	}
 
 	stack->pop();

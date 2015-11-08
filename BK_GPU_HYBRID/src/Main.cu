@@ -176,7 +176,7 @@ This L array is used to first sort the neighbour array values by Psize
 		L[nodeIndex].Psize = Psize-1;
 		L[nodeIndex].index = nodeIndex;
 
-		Ng->copy(nodeIndex++, offset, (int *) g1->neighbourArray[i].data(),Psize,(int *)g1->preDegeneracyVertices[i].data(),Rsize);
+		Ng->copy(nodeIndex++, offset, g1->neighbourArray[i].data(),Psize,g1->preDegeneracyVertices[i].data(),Rsize);
 
 		BK_GPU::StackElement *element=new BK_GPU::StackElement(offset,Rsize ,offset + Rsize, Psize - 1 , offset + Rsize + Psize - 1, 1,
 				0,g1->neighbourArray[i][Psize-1], true);

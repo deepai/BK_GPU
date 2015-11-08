@@ -28,7 +28,7 @@ public:
 	unsigned *data;
 	unsigned *dataOffset;
 
-	void copy(int nodeindex, int offset, int *neighbours, int Psize,int *rejectLists,int Rsize);
+	void copy(int nodeindex, int offset, unsigned *neighbours, int Psize,unsigned *rejectLists,int Rsize);
 
 	template<typename InputIterator1, typename InputIterator2,
 			typename OutputIterator>

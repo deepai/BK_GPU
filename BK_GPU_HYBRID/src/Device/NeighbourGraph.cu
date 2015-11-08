@@ -44,19 +44,19 @@ NeighbourGraph::~NeighbourGraph() {
  * @param neighbour //neighbour array containing the vertices which we shall copy.
  * @param size //size contains the length of the |1+P| vertices. The rowoffset shall be filled by this value.
  */
-void NeighbourGraph::copy(int nodeindex, int offset, int *neighbours, int Psize,int *rejectLists,int Rsize) {
+void NeighbourGraph::copy(int nodeindex, int offset, unsigned *neighbours, int Psize,unsigned *rejectLists,int Rsize) {
 
 	CudaError(
-			cudaMemcpy(data + offset, rejectLists, sizeof(int) * Rsize,
+			cudaMemcpy(data + offset, rejectLists, sizeof(unsigned) * Rsize,
 					cudaMemcpyHostToDevice));
-	CudaError(cudaMemcpy(data + offset + Rsize,neighbours,sizeof(int) * Psize,cudaMemcpyHostToDevice));
+	CudaError(cudaMemcpy(data + offset + Rsize,neighbours,sizeof(unsigned) * Psize,cudaMemcpyHostToDevice));
 
 	//DEV_SYNC;
 
 	int lastValue=offset + Psize + Rsize;
 
-	CudaError(cudaMemcpy(dataOffset+nodeindex,&offset,sizeof(int),cudaMemcpyHostToDevice));
-	CudaError(cudaMemcpy(dataOffset+nodeindex+1,&lastValue,sizeof(int),cudaMemcpyHostToDevice));
+	CudaError(cudaMemcpy(dataOffset+nodeindex,&offset,sizeof(unsigned),cudaMemcpyHostToDevice));
+	CudaError(cudaMemcpy(dataOffset+nodeindex+1,&lastValue,sizeof(unsigned),cudaMemcpyHostToDevice));
 
 }
 
