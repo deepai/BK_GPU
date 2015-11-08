@@ -27,16 +27,13 @@ namespace BK_GPU {
  * @param element
  * @return
  */
-void BKInstance::nextNonPivot()
+void BKInstance::nextNonPivot(int pivot)
 {
 	int NullValue;
 	//Obtain the TopElement
 	stack->topElement(&topElement);
 
 	//CudaError(cudaStreamSynchronize(*(this->Stream)));
-
-	//obtain the pivot element
-	int pivot=topElement.pivot;
 
 	//AdjacencySize
 	int adjacencyPivotSize = host_graph->rowOffset[pivot+1] - host_graph->rowOffset[pivot];
@@ -46,7 +43,7 @@ void BKInstance::nextNonPivot()
 	int  bcount = adjacencyPivotSize;
 
 	//obtain the elements for the adata
-	unsigned int *adata = (unsigned *)(Ng->data) +topElement.beginP;
+	unsigned int *adata = (Ng->data) +topElement.beginP;
 	int  acount = topElement.currPSize;
 
 	unsigned *ptr;
@@ -69,14 +66,20 @@ void BKInstance::nextNonPivot()
 					&currNeighbour, &non_neighbours);
 
 	//Locate and swap the last zeroes.
-	GpuArraySwapNonPivot(Ng,ptr,topElement.beginP,topElement.beginP + topElement.currPSize - 2,currNeighbour,*(this->Stream));
+	GpuArraySwapNonPivot(Ng,ptr,topElement.beginP,topElement.beginP + topElement.currPSize - 1,currNeighbour,*(this->Stream));
+
+	// Check bounds and swap if the selected element is not at beginR - 1 position
+	if((topElement.beginP + topElement.currPSize - 1) != (topElement.beginR - 1))
+	{
+		GpuSwap(Ng,topElement.beginP + topElement.currPSize - 1,topElement.beginR - 1,*(this->Stream));
+	}
 
 	int nextCandidateNode; //= Ng->data[topElement.beginR-1];
 
-	CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginP + topElement.currPSize - 1 ,sizeof(int),cudaMemcpyDeviceToHost));
+	CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginR - 1 ,sizeof(int),cudaMemcpyDeviceToHost));
 
 
-	bdata  = (unsigned *)(Ng->data) + host_graph->rowOffset[nextCandidateNode];
+	bdata  = (Ng->data) + host_graph->rowOffset[nextCandidateNode];
 	bcount = host_graph->rowOffset[nextCandidateNode+1] - host_graph->rowOffset[nextCandidateNode];
 
 	if(topElement.currPSize > 1)
@@ -129,13 +132,14 @@ void BKInstance::nextNonPivot()
 
 		}
 
-		//Non-neighbours of the P values.
+		//Non_neighbour of the current selected candidate Vertex
 		non_neighbours = topElement.currPSize - 1 - currNeighbour;
 
+		//if size of neighbors is atleast 1 and less than currPSize
 		if((currNeighbour>0) && (currNeighbour < (topElement.currPSize - 1)))
 		{
 			GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, ptr,
-				topElement.beginP, topElement.beginP + topElement.currPSize - 2,non_neighbours,*(this->Stream));
+				topElement.beginP, topElement.beginP + topElement.currPSize - 1,non_neighbours,*(this->Stream));
 		}
 
 		CudaError(cudaFree(ptr));
@@ -174,7 +178,7 @@ void BKInstance::nextNonPivot()
 			}
 
 			if((NeighboursinX > 0) && (NeighboursinX < topElement.currXSize ))
-				GpuArrayRearrangeX(Ng,stack,gpuGraph,ptr,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
+				GpuArrayRearrangeX(Ng,stack,gpuGraph,ptr,topElement.beginX,topElement.beginX + topElement.currXSize - 1,NeighboursinX,*(this->Stream));
 
 			topElement.currXSize = NeighboursinX;
 

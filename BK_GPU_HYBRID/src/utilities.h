@@ -16,7 +16,7 @@
 
 #define DEV_SYNC CudaError(cudaDeviceSynchronize())
 
-//#define PRINTCLIQUES
+#define PRINTCLIQUES
 
 //the following are UBUNTU/LINUX ONLY terminal color codes.
 #define RESET   "\033[0m"

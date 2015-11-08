@@ -177,7 +177,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 	//pointer to the beginning of the adjacency list for the maximum value.
 	unsigned *bdata = gpuGraph->Columns + host_graph->rowOffset[hptr[max_index]];
 
-
+//Use different Threads for computation of P and X segments
 	#pragma omp parallel num_threads(2)
 	{
 		int threadId = omp_get_thread_num();
@@ -367,14 +367,12 @@ void BKInstance::moveToX()
 	//Update the topElement.
 	stack->topElement(&topElement);
 
-	stack->secondElement(&secondElement);
-
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 	//Old_posElement is the last position of the P array.
-	int old_posElement = topElement.beginR;
+	int old_posElement = topElement.beginR - 1;
 
-	//new position for the X value would be at topElement.beginX + topElement.currXSize
+	//new position for the X value would be at secondElement.beginX + secondElement.currXSize
 	int new_posElement = topElement.beginX + topElement.currXSize;
 
 	//swap the positions
@@ -387,22 +385,24 @@ void BKInstance::moveToX()
 		GpuSwap(this->Ng,topElement.beginP,old_posElement,*(this->Stream));
 
 		//Since P segment might not extend till beginR, an extra swap might be required to correctly set the values
-		if((topElement.beginP + topElement.currPSize)!= topElement.beginR)
+		if((topElement.beginP + topElement.currPSize)!= (topElement.beginR - 1))
 		{
-			GpuSwap(this->Ng,topElement.beginP+topElement.currPSize,topElement.beginR,*(this->Stream));
+			GpuSwap(this->Ng,topElement.beginP+topElement.currPSize,topElement.beginR - 1,*(this->Stream));
 		}
 	}
 
-	//beginR will shift towards right
+	//beginR will remaing same
 	//beginP will shift towards right
 	//currXSize will increase
-	//currRSize will decrease
+	//currRSize will be same
 	//currPSize remains the same.
 
-	topElement.currXSize++;
-	topElement.currRSize--;
-	topElement.beginP++;
-	topElement.beginR++;
+	topElement.currXSize = topElement.currXSize + 1;
+	topElement.beginP = topElement.beginP + 1;
+	topElement.currPSize = topElement.currPSize - 1;
+
+	//pop the current top of the stack
+	//stack->pop();
 
 	#pragma omp parallel num_threads(2)
 	{
@@ -468,7 +468,10 @@ void BKInstance::moveToX()
 			}
 		}
 	}
-	//Pop the values of the previous stack
+
+	topElement.trackerSize += 1;
+
+	//Pop the values of the secondElement
 	stack->pop();
 
 	//Push the new configuration values into the stack.
@@ -527,7 +530,7 @@ void BKInstance::moveFromXtoP()
 	int NumValuesToMoveFromXToP = currTrackerSize - secondElement.trackerSize;
 
 	//Pointer to the tracker elements to sort them.
-	unsigned *d_in=&(tracker->elements[currTrackerSize-NumValuesToMoveFromXToP]),*d_out=d_in;
+	unsigned *d_in=tracker->elements + currTrackerSize - NumValuesToMoveFromXToP,*d_out=d_in;
 
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -611,21 +614,21 @@ void BKInstance::moveFromXtoP()
 
 	CudaError(cudaFree(d_flags));
 
-	d_in=Ng->data + topElement.beginP - NumValuesToMoveFromXToP;
+	d_in=Ng->data + secondElement.beginP;
 
-	//Sort the NumValuesToMoveFromXToP + CurrPSize elements.
-	if(topElement.currPSize + NumValuesToMoveFromXToP > 1)
+	//Sort the NumValuesToMoveFromXToP + CurrPSize elements = secondElement.currPSize.
+	if(secondElement.currPSize > 1)
 	{
 		void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currPSize,0,sizeof(int)*8,*(this->Stream)));
 
 		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
 		if(d_temp_storage==NULL)
 			d_temp_storage=&NullValue;
 
-		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,topElement.currPSize + NumValuesToMoveFromXToP,0,sizeof(int)*8,*(this->Stream)));
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currPSize,0,sizeof(int)*8,*(this->Stream)));
 
 		CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -633,12 +636,32 @@ void BKInstance::moveFromXtoP()
 			CudaError(cudaFree(d_temp_storage));
 	}
 
+	d_in=Ng->data + secondElement.beginX;
+
+	if(secondElement.currXSize > 1)
+	{
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
+
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currXSize,0,sizeof(int)*8,*(this->Stream)));
+
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+		if(d_temp_storage==NULL)
+			d_temp_storage=&NullValue;
+
+		CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,d_in,d_in,secondElement.currXSize,0,sizeof(int)*8,*(this->Stream)));
+
+		CudaError(cudaStreamSynchronize(*(this->Stream)));
+
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
+	}
+
+	stack->pop();
 
 	//remove the nodes from the tracker
 	tracker->pop(NumValuesToMoveFromXToP);
 
-	//pop the current stack value.
-	stack->pop();
 
 }
 
@@ -691,10 +714,10 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 		moveToX();
 
 		//While there are non_neighbours, continue invoking the recursive function.
-		while(non_neighbours)
+		for(int i=0;i<non_neighbours;i++)
 		{
 			//Obtains the nextNonPivot Element
-			nextNonPivot();
+			nextNonPivot(pivot);
 
 			//On Expansion the current configuration would only result in a smaller CliqueSize.
 			if(topElement.currRSize + topElement.currPSize > maxCliqueSizeObtained)
@@ -702,7 +725,7 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 
 			//Move elements back to X.
 			moveToX();
-			non_neighbours--;
+			//non_neighbours--;
 		}
 
 		//Move All elements back from X to P.

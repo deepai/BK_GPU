@@ -25,12 +25,12 @@ public:
 	//void* operator new[](std::size_t count);
 
 	void topElement(StackElement *topElement) {
-		CudaError(cudaMemcpy(topElement,elements+top,sizeof(StackElement),cudaMemcpyDeviceToHost));
+		CudaError(cudaMemcpy(topElement,elements+top-1,sizeof(StackElement),cudaMemcpyDeviceToHost));
 	}
 
 	void secondElement(StackElement *secondElement)
 	{
-		CudaError(cudaMemcpy(secondElement,elements+top-1,sizeof(StackElement),cudaMemcpyDeviceToHost));
+		CudaError(cudaMemcpy(secondElement,elements+top-2,sizeof(StackElement),cudaMemcpyDeviceToHost));
 	}
 
 	/**
@@ -39,9 +39,8 @@ public:
 	 */
 	void push(StackElement *topElement) //true indicates forward and false indicates backward)
 			{
-		++top;
 		CudaError(cudaMemcpy(elements+top,topElement,sizeof(StackElement),cudaMemcpyHostToDevice));
-
+		++top;
 	}
 
 	/**

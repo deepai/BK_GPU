@@ -12,9 +12,9 @@ namespace BK_GPU {
 
 GPU_Stack::GPU_Stack(int size) {
 	// TODO Auto-generated constructor stub
-	top = -1;
+	top = 0;
 	maxCliqueSize = size;
-	CudaError(cudaMalloc(&elements, sizeof(StackElement) * size));
+	CudaError(cudaMalloc(&elements, sizeof(StackElement) * (size+1)));
 
 }
 

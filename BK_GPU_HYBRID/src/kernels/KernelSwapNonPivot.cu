@@ -61,7 +61,7 @@ void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,unsigned* darray,int sta
 
 	unsigned pos_offset;
 
-	CudaError(cudaMemcpy(&pos_offset,d_pos,sizeof(int),cudaMemcpyDeviceToHost));
+	CudaError(cudaMemcpy(&pos_offset,d_pos,sizeof(unsigned),cudaMemcpyDeviceToHost));
 
 	if(pos_offset == end_offset)
 		return;
