@@ -211,7 +211,7 @@ This L array is used to first sort the neighbour array values by Psize
 	std::cout<<omp_get_num_threads()<<std::endl;
 
 	for(int i=0;i<numThreads;i++)
-		cudaStreamCreate(&stream[i]);
+		cudaStreamCreate(&(stream[i]));
 
 	//Create required number of ContextPointers
 	mgpu::ContextPtr *Contextptr=new mgpu::ContextPtr[numThreads];
