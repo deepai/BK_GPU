@@ -207,7 +207,7 @@ void BKInstance::nextNonPivot(int pivot)
 				nonNeighboursinX = topElement.currXSize - NeighboursinX;
 
 				if((NeighboursinX > 0) && (NeighboursinX < topElement.currXSize ))
-					GpuArrayRearrangeX(Ng,stack,gpuGraph,auxX,topElement.beginX,topElement.beginX + topElement.currXSize - 1,NeighboursinX,currStream);
+					GpuArrayRearrangeX(Ng,stack,gpuGraph,auxX,topElement.beginX,topElement.beginX + topElement.currXSize - 1,nonNeighboursinX,currStream);
 
 				topElement.currXSize = NeighboursinX;
 

@@ -326,9 +326,10 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 				/***
 				 * Scan Complete
 				 */
+				nonNeighboursinX = topElement.currXSize - NeighboursinX;
 
 				if((NeighboursinX > 0) && (NeighboursinX < currX ))
-					GpuArrayRearrangeX(Ng,stack,gpuGraph,auxStorage,topElement.beginX,topElement.beginX + topElement.currXSize - 1,NeighboursinX,currStream);
+					GpuArrayRearrangeX(Ng,stack,gpuGraph,auxStorage,topElement.beginX,topElement.beginX + topElement.currXSize - 1,nonNeighboursinX,currStream);
 
 				topElement.currXSize = NeighboursinX;
 
