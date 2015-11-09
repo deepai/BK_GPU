@@ -139,7 +139,7 @@ void BKInstance::nextNonPivot(int pivot)
 		if((currNeighbour>0) && (currNeighbour < (topElement.currPSize - 1)))
 		{
 			GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, ptr,
-				topElement.beginP, topElement.beginP + topElement.currPSize - 1,non_neighbours,*(this->Stream));
+				topElement.beginP, topElement.beginP + topElement.currPSize - 2,non_neighbours,*(this->Stream));
 		}
 
 		CudaError(cudaFree(ptr));

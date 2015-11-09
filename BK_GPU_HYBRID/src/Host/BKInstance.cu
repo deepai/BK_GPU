@@ -391,14 +391,16 @@ void BKInstance::moveToX()
 		}
 	}
 
-	//beginR will remaing same
+	//beginR will shift right
 	//beginP will shift towards right
 	//currXSize will increase
-	//currRSize will be same
+	//currRSize will decrease
 	//currPSize remains the same.
 
 	topElement.currXSize = topElement.currXSize + 1;
 	topElement.beginP = topElement.beginP + 1;
+	topElement.beginR = topElement.beginR + 1;
+	topElement.currRSize = topElement.currRSize - 1;
 
 	//pop the current top of the stack
 	//stack->pop();
