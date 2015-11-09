@@ -41,6 +41,19 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 }
 
 /**
+ * This method is used to calculate the maximum buffer size for auxilliary and working array
+ * It takes the max corresponding to both the Inclusive Sum and Exclusive Sum.
+ */
+
+
+BKInstance::~BKInstance()
+{
+	delete this->tracker;
+	delete this->stack;
+
+}
+
+/**
  * Requires: Updated TopElement,Updated Stack,Sorted P and X segments.
  *
  * This element finds the pivot location.Once the pivot is located it is moved to the end of the current P segment.

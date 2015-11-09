@@ -19,8 +19,8 @@ public:
 	unsigned *elements;
 
 	RecursionStack(int size,cudaStream_t &stream);
-
 	~RecursionStack();
+
 
 	void push(int value)
 	{

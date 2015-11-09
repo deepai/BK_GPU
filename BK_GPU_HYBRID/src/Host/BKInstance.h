@@ -25,6 +25,8 @@ public:
 
 	int maxCliqueSizeObtained;
 
+	//Auxiliary memory required for Sorting,InclusiveSum
+
 	BK_GPU::GPU_CSR *gpuGraph;
 	BK_GPU::NeighbourGraph *Ng;
 	BK_GPU::GPU_Stack *stack;
@@ -38,19 +40,16 @@ public:
 	int MaxThreads;
 
 	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,cudaStream_t &stream,mgpu::ContextPtr *context,int numThreads);
+	~BKInstance();
+
 	void RunCliqueFinder(int CliqueId);
 	int processPivot(BK_GPU::StackElement &element);
 	void printClique(int CliqueSize,int beginClique);
 	void moveToX();
 	void moveFromXtoP();
 	void nextNonPivot(int pivot);
-
-	~BKInstance()
-	{
-		delete this->stack;
-		delete this->tracker;
-	}
 };
+
 
 } /* namespace BK_GPU */
 #endif /* BKINSTANCE_H_ */

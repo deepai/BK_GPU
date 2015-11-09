@@ -96,6 +96,9 @@ void GpuArrayRearrangeP(BK_GPU::NeighbourGraph *graph,
 	//Calculate the number of elements present
 	int numElements = end_offset - start_offset + 1;
 
+	if(numElements < 2)
+		return;
+
 	//Used for auxillary storage.
 	unsigned* d_temp;
 
