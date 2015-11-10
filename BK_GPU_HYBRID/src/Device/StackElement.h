@@ -9,6 +9,7 @@
 #define STACKELEMENT_H_
 
 #include "../utilities.h"
+#include "assert.h"
 
 namespace BK_GPU {
 
@@ -29,6 +30,20 @@ public:
 	StackElement(int beginX,int currXSize,int beginP,int currPSize,int beginR,int currRSize,int trackerSize,int pivot,int direction);
 	StackElement();
 	~StackElement();
+
+	void TestEquality(StackElement &otherElement)
+	{
+		assert(beginX == otherElement.beginX);
+		assert(beginP == otherElement.beginP);
+		assert(beginR == otherElement.beginR);
+		assert(currXSize == otherElement.currXSize);
+		assert(currPSize == otherElement.currPSize);
+		assert(currRSize == otherElement.currRSize);
+		assert(pivot == otherElement.pivot);
+		assert(trackerSize == otherElement.trackerSize);
+		assert(direction == otherElement.direction);
+
+	}
 
 
 	__host__

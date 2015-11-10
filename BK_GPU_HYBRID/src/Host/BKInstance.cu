@@ -25,7 +25,7 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 	this->gpuGraph = gpuGraph; 					//CSR Graph allocated in Device memory
 	this->stack = stack; 						//Stack for the current Clique , allocated in the device memory
 
-	stack->topElement(&topElement); 	//StackElement resident in the CPU memory
+	stack->topElement(&(this->topElement)); 	//StackElement resident in the CPU memory
 
 	this->Stream= &stream;						//cudastream
 
@@ -38,6 +38,7 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 
 	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize,stream); //This device resident is used to keep a track of non_neighbours for a given evalution of BK
 
+	testInstance = new BKInstanceTest();
 }
 
 /**
@@ -73,6 +74,13 @@ BKInstance::~BKInstance()
  * @return
  */
 int BKInstance::processPivot(BK_GPU::StackElement &element) {
+
+	#ifdef TEST_ON
+	{
+		testInstance->TestProcessPivot(Ng,stack,host_graph);
+	}
+	#endif
+
 	/**Step 1: Find the pivot element
 	 *
 	 */
@@ -353,6 +361,12 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 	stack->push(&topElement);
 
+	#ifdef TEST_ON
+	{
+		testInstance->finalElement.TestEquality(topElement);
+	}
+	#endif
+
 	/**Free the pointers **/
 
 	delete[] hptr;
@@ -377,9 +391,16 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
  */
 void BKInstance::moveToX()
 {
+
 	int NullValue;
 	//Update the topElement.
 	stack->topElement(&topElement);
+
+	#ifdef TEST_ON
+	{
+		testInstance->TestMoveToX(Ng,stack,host_graph,topElement.pivot);
+	}
+	#endif
 
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -494,6 +515,12 @@ void BKInstance::moveToX()
 
 	//Push the newly moved element into the tracker.
 	tracker->push(topElement.pivot);
+
+	#ifdef TEST_ON
+	{
+		testInstance->finalElement.TestEquality(topElement);
+	}
+	#endif
 
 	//CudaError(cudaStreamSynchronize(*(this->Stream)));
 

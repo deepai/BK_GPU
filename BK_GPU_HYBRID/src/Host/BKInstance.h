@@ -15,6 +15,7 @@
 #include "../cub/cub.cuh"
 #include "../moderngpu/moderngpu.cuh"
 #include "../Device/RecursionStack.h"
+#include "BKInstanceTest.h"
 
 
 
@@ -38,6 +39,8 @@ public:
 	cudaStream_t *Stream;
 	mgpu::ContextPtr *Contextptr;
 	int MaxThreads;
+
+	BKInstanceTest *testInstance;
 
 	BKInstance(Graph *host_graph,BK_GPU::GPU_CSR *gpuGraph,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,cudaStream_t &stream,mgpu::ContextPtr *context,int numThreads);
 	~BKInstance();

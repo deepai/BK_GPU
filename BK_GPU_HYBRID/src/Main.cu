@@ -108,6 +108,8 @@ int main(int argc, char * argv[]) {
 
 	}
 
+	CudaError(cudaDeviceReset());
+
 	g1->sortEdgeLists();
 
 	g1->calculateKores(isBigEndian()); //Added
