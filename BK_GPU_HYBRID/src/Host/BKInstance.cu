@@ -51,6 +51,7 @@ BKInstance::~BKInstance()
 {
 	delete this->tracker;
 	delete this->stack;
+	delete this->testInstance;
 
 }
 
@@ -363,7 +364,7 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 
 	#ifdef TEST_ON
 	{
-		testInstance->finalElement.TestEquality(topElement);
+		testInstance->TestPivotEnd(topElement,Ng,stack,host_graph);
 	}
 	#endif
 
@@ -561,6 +562,12 @@ void BKInstance::printClique(int CliqueSize,int beginClique)
  */
 void BKInstance::moveFromXtoP()
 {
+	#ifdef TEST_ON
+	{
+		testInstance->TestMoveFromXToP(Ng,stack,host_graph);
+	}
+	#endif
+
 	int NullValue;
 	//obtain the top of the stack first.
 	stack->topElement(&topElement);
@@ -720,6 +727,12 @@ void BKInstance::moveFromXtoP()
 
 	//remove the nodes from the tracker
 	tracker->pop(NumValuesToMoveFromXToP);
+
+	#ifdef TEST_ON
+	{
+		testInstance->finalElement.TestEquality(secondElement);
+	}
+	#endif
 
 
 }
