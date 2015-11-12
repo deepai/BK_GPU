@@ -14,7 +14,7 @@
 #include <assert.h>
 #include <cuda_runtime.h>
 
-#define TEST_ON
+//#define TEST_ON
 
 #define DEV_SYNC CudaError(cudaDeviceSynchronize())
 

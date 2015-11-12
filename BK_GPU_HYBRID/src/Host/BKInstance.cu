@@ -390,10 +390,13 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
  * The previous stack configuration is popped and a new configuration is pushed into it.
  * The new stack configuration has the updated X and R values
  */
-void BKInstance::moveToX()
+void BKInstance::moveToX(int pivot)
 {
 
 	int NullValue;
+
+	stack->pop();
+
 	//Update the topElement.
 	stack->topElement(&topElement);
 
@@ -406,7 +409,7 @@ void BKInstance::moveToX()
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 	//Old_posElement is the last position of the P array.
-	int old_posElement = topElement.beginR;
+	int old_posElement = topElement.beginR - 1;
 
 	//new position for the X value would be at secondElement.beginX + secondElement.currXSize
 	int new_posElement = topElement.beginX + topElement.currXSize;
@@ -421,9 +424,9 @@ void BKInstance::moveToX()
 		GpuSwap(this->Ng,topElement.beginP,old_posElement,*(this->Stream));
 
 		//Since P segment might not extend till beginR, an extra swap might be required to correctly set the values
-		if((topElement.beginP + topElement.currPSize)!= topElement.beginR)
+		if((topElement.beginP + topElement.currPSize - 1)!= (topElement.beginR - 1))
 		{
-			GpuSwap(this->Ng,topElement.beginP+topElement.currPSize,topElement.beginR,*(this->Stream));
+			GpuSwap(this->Ng,topElement.beginP+topElement.currPSize - 1,topElement.beginR - 1,*(this->Stream));
 		}
 	}
 
@@ -435,8 +438,10 @@ void BKInstance::moveToX()
 
 	topElement.currXSize = topElement.currXSize + 1;
 	topElement.beginP = topElement.beginP + 1;
-	topElement.beginR = topElement.beginR + 1;
-	topElement.currRSize = topElement.currRSize - 1;
+	topElement.currPSize = topElement.currPSize - 1;
+	topElement.pivot = pivot;
+	//topElement.beginR = topElement.beginR + 1;
+	//topElement.currRSize = topElement.currRSize - 1;
 
 	//pop the current top of the stack
 	//stack->pop();
@@ -509,7 +514,7 @@ void BKInstance::moveToX()
 	topElement.trackerSize += 1;
 
 	//Pop the values of the secondElement
-	stack->pop();
+	//stack->pop();
 
 	//Push the new configuration values into the stack.
 	stack->push(&topElement);
@@ -783,20 +788,22 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 			RunCliqueFinder(CliqueId);
 
 		//Move the pivot element to Reject List.
-		moveToX();
+		moveToX(pivot);
 
 		//While there are non_neighbours, continue invoking the recursive function.
-		for(int i=0;i<non_neighbours;i++)
+		for(int i=0;i<non_neighbours && (topElement.currPSize!=0) ;i++)
 		{
 			//Obtains the nextNonPivot Element
 			nextNonPivot(pivot);
 
+			int nextPivot = topElement.pivot;
+
 			//On Expansion the current configuration would only result in a smaller CliqueSize.
-			if(topElement.currRSize + topElement.currPSize > maxCliqueSizeObtained)
+			if(topElement.currRSize + topElement.currPSize > maxCliqueSizeObtained )
 				RunCliqueFinder(CliqueId);
 
 			//Move elements back to X.
-			moveToX();
+			moveToX(nextPivot);
 			//non_neighbours--;
 		}
 

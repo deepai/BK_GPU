@@ -48,7 +48,7 @@ public:
 	void RunCliqueFinder(int CliqueId);
 	int processPivot(BK_GPU::StackElement &element);
 	void printClique(int CliqueSize,int beginClique);
-	void moveToX();
+	void moveToX(int pivot);
 	void moveFromXtoP();
 	void nextNonPivot(int pivot);
 };
