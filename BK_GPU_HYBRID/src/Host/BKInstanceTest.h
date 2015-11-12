@@ -27,8 +27,8 @@ public:
 
 		StackElement finalElement;
 
-		unsigned *Psegment;
-		unsigned *Xsegment;
+		std::vector<unsigned> Psegment;
+		std::vector<unsigned> Xsegment;
 
 		BKInstanceTest();
 
@@ -57,32 +57,38 @@ public:
 				int max_index= 0;
 				int maxNeighbourinP=-1;
 
-				Psegment = new unsigned[currentTopElement.currPSize];
-				Xsegment = new unsigned[currentTopElement.currXSize];
+				//Allocate space for PSegment and Xsegment
+				Psegment.resize(currentTopElement.currPSize);
+				Xsegment.resize(currentTopElement.currXSize);
 
-				CudaError(cudaMemcpy(Psegment,Ng->data+currentTopElement.beginP,sizeof(unsigned)*currentTopElement.currPSize,cudaMemcpyDeviceToHost));
-				CudaError(cudaMemcpy(Xsegment,Ng->data+currentTopElement.beginX,sizeof(unsigned)*currentTopElement.currXSize,cudaMemcpyDeviceToHost))
+				//copy into the previous arrays the value from the cuda device
+				CudaError(cudaMemcpy(Psegment.data(),Ng->data+currentTopElement.beginP,sizeof(unsigned)*currentTopElement.currPSize,cudaMemcpyDeviceToHost));
+				CudaError(cudaMemcpy(Xsegment.data(),Ng->data+currentTopElement.beginX,sizeof(unsigned)*currentTopElement.currXSize,cudaMemcpyDeviceToHost))
 
-				//obtain the pivot element;
+				//obtain the pivot element
+				//Loop throught the elements and obtain the number of its neighbours in the array
 				for(int i=0;i<currentTopElement.currPSize;i++)
 				{
-					unsigned currNode = Psegment[i];
-					int numNeighbours = 0;
+					unsigned currNode = Psegment[i]; //Get Current Node ID
+					int numNeighbours = 0; //Initialise number of neighbours
 					for(int j=0;j<currentTopElement.currPSize;j++)
 					{
-						if(j==i)
+						if(j==i) //skip if the index represent the same node as the current node
 							continue;
 						else
 						{
+							//obtain the adjacency size
 							int adjacencySize = host_graph->rowOffset[currNode + 1] - host_graph->rowOffset[currNode];
 
+							//beginoffset of the adjacency list
 							int beginOffset =  host_graph->rowOffset[currNode];
 
+							//binary search returns whether the node j exist in the adjancency list of node i. IF yes, Increment the neighbour count
 							if(std::binary_search(host_graph->columns.begin() + beginOffset, host_graph->columns.begin() + beginOffset + adjacencySize,Psegment[j]))
 								numNeighbours++;
 						}
 					}
-
+					//if number of neighbours is greater than maxneighbour till now,update the maxneighbour
 					if(numNeighbours > maxNeighbourinP)
 					{
 						maxNeighbourinP = numNeighbours;
@@ -90,6 +96,7 @@ public:
 					}
 				}
 
+				//pivot element
 				unsigned pivot = Psegment[max_index];
 				int beginOffset = host_graph->rowOffset[pivot];
 				int adjacencySize = host_graph->rowOffset[pivot + 1] - host_graph->rowOffset[pivot];
@@ -107,9 +114,11 @@ public:
 				//Sort the Values such that neighbors are towards the left and sorted
 				std::sort(auxillaryVec.begin(),auxillaryVec.end(),Compare());
 
+				//Copy the elements back into Psegment
 				for(int i=0;i<currentTopElement.currPSize; i++)
 					Psegment[i] = auxillaryVec[i].first;
 
+				//Clear the vector
 				auxillaryVec.clear();
 
 				//Resize the array to fill currXsize
@@ -117,6 +126,7 @@ public:
 
 				int numNeighboursInX=0;
 
+				//Search for the neighbours of the Xsegment
 				for(int i=0;i<currentTopElement.currXSize;i++)
 				{
 					bool isNeighbor = std::binary_search(host_graph->columns.begin() + beginOffset, host_graph->columns.begin() + beginOffset + adjacencySize,Xsegment[i]);
@@ -158,60 +168,136 @@ public:
 
 		void TestPivotEnd(StackElement &topElement,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,Graph *host_graph)
 		{
-			finalElement.TestEquality(topElement);
+			#ifdef TEST_ON
+			{
+				//Test whether the configuration parameters matches
+				finalElement.TestEquality(topElement);
 
-			unsigned *PdeviceSegment = new unsigned[max(1,finalElement.currPSize)];
-			unsigned *XdeviceSegment = new unsigned[max(1,finalElement.currXSize)];
+				//Make two auxillary array to store the results from the device
+				std::vector<unsigned> PdeviceSegment(finalElement.currPSize);
+				std::vector<unsigned> XdeviceSegment(finalElement.currXSize);
 
-			CudaError(cudaMemcpy(PdeviceSegment,Ng->data+finalElement.beginP,sizeof(unsigned)*finalElement.currPSize,cudaMemcpyDeviceToHost));
-			CudaError(cudaMemcpy(XdeviceSegment,Ng->data+finalElement.beginX,sizeof(unsigned)*finalElement.currXSize,cudaMemcpyDeviceToHost))
+				//Copy into memory from the device
+				CudaError(cudaMemcpy(PdeviceSegment.data(),Ng->data+finalElement.beginP,sizeof(unsigned)*finalElement.currPSize,cudaMemcpyDeviceToHost));
+				CudaError(cudaMemcpy(XdeviceSegment.data(),Ng->data+finalElement.beginX,sizeof(unsigned)*finalElement.currXSize,cudaMemcpyDeviceToHost))
 
-			for(int i=0;i<finalElement.currPSize;i++)
-				assert(PdeviceSegment[i]==Psegment[i]);
+				//assert that the values in the Psegment and the values in the Xsegment are the same.
+				for(int i=0;i<finalElement.currPSize;i++)
+					assert(PdeviceSegment[i]==Psegment[i]);
 
-			for(int i=0;i<finalElement.currXSize;i++)
-				assert(XdeviceSegment[i]==Xsegment[i]);
+				for(int i=0;i<finalElement.currXSize;i++)
+					assert(XdeviceSegment[i]==Xsegment[i]);
 
-			delete Psegment;
-			delete Xsegment;
-			delete PdeviceSegment;
-			delete XdeviceSegment;
+
+				//delete the arrays.
+
+				Psegment.clear();
+				Xsegment.clear();
+				PdeviceSegment.clear();
+				XdeviceSegment.clear();
+
+			}
+			#endif
 
 		}
 
 		void TestMoveToX(BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,Graph *host_graph,int pivot)
 		{
-			stack->topElement(&currentTopElement);
+			#ifdef TEST_ON
+			{
+				//Check top configuration parameters
+				stack->topElement(&currentTopElement);
 
-			finalElement.beginX = currentTopElement.beginX;
-			finalElement.currXSize = currentTopElement.currXSize + 1;
-			finalElement.beginP = currentTopElement.beginP + 1;
-			finalElement.currPSize = currentTopElement.currPSize;
-			finalElement.beginR = currentTopElement.beginR;
-			finalElement.currRSize = currentTopElement.currRSize - 1;
+				//Make two auxillary array to store the results from the device
+				Psegment.resize(finalElement.currPSize);
+				Xsegment.resize(finalElement.currXSize + 1);
 
-			finalElement.pivot = currentTopElement.pivot;
-			finalElement.trackerSize = currentTopElement.trackerSize + 1;
-			finalElement.direction = true;
+				//Copy from device to host.
+				CudaError(cudaMemcpy(Psegment.data(),Ng->data + currentTopElement.beginP,sizeof(unsigned)*currentTopElement.currPSize,cudaMemcpyDeviceToHost));
+				CudaError(cudaMemcpy(Xsegment.data(),Ng->data + currentTopElement.beginX,sizeof(unsigned)*currentTopElement.currXSize,cudaMemcpyDeviceToHost));
 
+				//Top of the stack
+				Xsegment[currentTopElement.beginX + currentTopElement.currXSize] = currentTopElement.pivot;
+
+				std::sort(Xsegment.begin(),Xsegment.end());
+
+				//Set finalelement values
+
+				finalElement.beginX = currentTopElement.beginX;
+				finalElement.currXSize = currentTopElement.currXSize + 1;
+				finalElement.beginP = currentTopElement.beginP + 1;
+				finalElement.currPSize = currentTopElement.currPSize;
+				finalElement.beginR = currentTopElement.beginR;
+				finalElement.currRSize = currentTopElement.currRSize - 1;
+
+				finalElement.pivot = currentTopElement.pivot;
+				finalElement.trackerSize = currentTopElement.trackerSize + 1;
+				finalElement.direction = true;
+
+			}
+			#endif
+
+
+		}
+
+
+		void TestMoveToXEnd(StackElement &topElement,BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,Graph *host_graph)
+		{
+			#ifdef TEST_ON
+			{
+				finalElement.TestEquality(topElement);
+
+				std::vector<unsigned> PdeviceSegment(finalElement.currPSize);
+				std::vector<unsigned> XdeviceSegment(finalElement.currXSize);
+
+				for(int i=0;i<topElement.currPSize;i++)
+					assert(PdeviceSegment[i] == Psegment[i]);
+
+				for(int i=0;i<topElement.currXSize;i++)
+					assert(XdeviceSegment[i] == Xsegment[i]);
+
+				Psegment.clear();
+				Xsegment.clear();
+				PdeviceSegment.clear();
+				XdeviceSegment.clear();
+
+			}
+			#endif
 		}
 
 		void TestMoveFromXToP(BK_GPU::NeighbourGraph *Ng,BK_GPU::GPU_Stack *stack,Graph *host_graph)
 		{
-			stack->topElement(&currentTopElement);
-			stack->secondElement(&secondElement);
+			#ifdef TEST_ON
+			{
+				//Load the topElement and Second Element
+				stack->topElement(&currentTopElement);
+				stack->secondElement(&secondElement);
 
-			finalElement.beginX = secondElement.beginX;
-			finalElement.currXSize = secondElement.currXSize;
-			finalElement.beginP = secondElement.beginP;
-			finalElement.currPSize = secondElement.currPSize;
-			finalElement.beginR = secondElement.beginR;
-			finalElement.currRSize = secondElement.currRSize;
+				//resize the arrays
+				Psegment.resize(currentTopElement.currPSize + secondElement.trackerSize - currentTopElement.trackerSize);
+				Xsegment.resize(currentTopElement.currXSize);
 
-			finalElement.pivot = secondElement.pivot;
-			finalElement.trackerSize = secondElement.trackerSize;
-			finalElement.direction = true;
+				//Copy from device to host.
+				CudaError(cudaMemcpy(Psegment.data(),Ng->data + currentTopElement.beginP,sizeof(unsigned)*currentTopElement.currPSize,cudaMemcpyDeviceToHost));
+				CudaError(cudaMemcpy(Xsegment.data(),Ng->data + currentTopElement.beginX,sizeof(unsigned)*currentTopElement.currXSize,cudaMemcpyDeviceToHost));
 
+
+
+
+				//Set the finalElement values
+				finalElement.beginX = secondElement.beginX;
+				finalElement.currXSize = secondElement.currXSize;
+				finalElement.beginP = secondElement.beginP;
+				finalElement.currPSize = secondElement.currPSize;
+				finalElement.beginR = secondElement.beginR;
+				finalElement.currRSize = secondElement.currRSize;
+
+				finalElement.pivot = secondElement.pivot;
+				finalElement.trackerSize = secondElement.trackerSize;
+				finalElement.direction = true;
+
+			}
+			#endif
 		}
 };
 

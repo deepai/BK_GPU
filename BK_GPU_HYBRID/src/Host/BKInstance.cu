@@ -519,7 +519,7 @@ void BKInstance::moveToX()
 
 	#ifdef TEST_ON
 	{
-		testInstance->finalElement.TestEquality(topElement);
+		testInstance->TestMoveToXEnd(topElement,Ng,stack,host_graph);
 	}
 	#endif
 
