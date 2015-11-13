@@ -36,7 +36,7 @@ BKInstance::BKInstance(Graph *host_graph, BK_GPU::GPU_CSR *gpuGraph,
 
 	this->host_graph = host_graph;				//Graph allocated in the host memory
 
-	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize,stream); //This device resident is used to keep a track of non_neighbours for a given evalution of BK
+	this->tracker = new BK_GPU::RecursionStack(topElement.currPSize); //This device resident is used to keep a track of non_neighbours for a given evalution of BK
 
 	testInstance = new BKInstanceTest();
 }
@@ -281,6 +281,21 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 					topElement.beginP, topElement.beginP + currP - 2,non_neighbours,currStream);
 			}
 
+			//Declare a vector of size non_neighbours + 1;
+			unsigned *list_non_neighbour = new unsigned[max(1,non_neighbours)];
+
+			//Copy back the non_neighbours from device to the list.
+			CudaError(cudaMemcpy(list_non_neighbour,Ng->data + topElement.beginP + currNeighbour,sizeof(unsigned) * non_neighbours,cudaMemcpyDeviceToHost));
+
+			//push main pivot
+			tracker->push(hptr[max_index]);
+
+			//push non_neighbours of pivot
+			for(int i=0;i<non_neighbours;i++)
+				tracker->push(list_non_neighbour[i]);
+
+			//delete the auxilliary list
+			delete list_non_neighbour;
 
 		}
 		else if(threadId == 1)
@@ -511,7 +526,7 @@ void BKInstance::moveToX(int pivot)
 		}
 	}
 
-	topElement.trackerSize += 1;
+	topElement.trackerSize = tracker->size();
 
 	//Pop the values of the secondElement
 	//stack->pop();
@@ -520,7 +535,7 @@ void BKInstance::moveToX(int pivot)
 	stack->push(&topElement);
 
 	//Push the newly moved element into the tracker.
-	tracker->push(topElement.pivot);
+	//tracker->push(topElement.pivot);
 
 	#ifdef TEST_ON
 	{
@@ -589,7 +604,27 @@ void BKInstance::moveFromXtoP()
 	int NumValuesToMoveFromXToP = currTrackerSize - secondElement.trackerSize;
 
 	//Pointer to the tracker elements to sort them.
-	unsigned *d_in=tracker->elements + currTrackerSize - NumValuesToMoveFromXToP,*d_out=d_in;
+	unsigned *d_in,*d_out;
+
+	CudaError(cudaMalloc(&d_in,sizeof(unsigned)*NumValuesToMoveFromXToP));
+
+	d_out = d_in;
+
+	//CudaError(cudaMemcpy(d_in,tracker->elements->data() + secondElement.trackerSize,sizeof(unsigned) * NumValuesToMoveFromXToP,cudaMemcpyHostToDevice));
+	unsigned *Non_neighbours = new unsigned[NumValuesToMoveFromXToP];
+
+	//Fill from the vector from the last
+	for(int i=0;i<NumValuesToMoveFromXToP;i++)
+	{
+		Non_neighbours[NumValuesToMoveFromXToP - 1 - i] = tracker->getTopElement();
+		tracker->pop(1);
+	}
+
+	//Memory Allocation memcpy
+	CudaError(cudaMemcpy(d_in,Non_neighbours,sizeof(unsigned) * NumValuesToMoveFromXToP,cudaMemcpyHostToDevice));
+
+	delete[] Non_neighbours;
+
 
 	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
@@ -672,6 +707,7 @@ void BKInstance::moveFromXtoP()
 	GpuArrayRearrangeXtoP(Ng,d_flags,topElement.beginX,topElement.beginP-1,NeighboursinX,*(this->Stream));
 
 	CudaError(cudaFree(d_flags));
+	CudaError(cudaFree(d_in));
 
 	#pragma omp parallel num_threads(2)
 	{
@@ -731,7 +767,7 @@ void BKInstance::moveFromXtoP()
 	stack->pop();
 
 	//remove the nodes from the tracker
-	tracker->pop(NumValuesToMoveFromXToP);
+	//tracker->pop(NumValuesToMoveFromXToP);
 
 	#ifdef TEST_ON
 	{
@@ -794,7 +830,7 @@ void BKInstance::RunCliqueFinder(int CliqueId) {
 		for(int i=0;i<non_neighbours && (topElement.currPSize!=0) ;i++)
 		{
 			//Obtains the nextNonPivot Element
-			nextNonPivot(pivot);
+			nextNonPivot(pivot,i);
 
 			int nextPivot = topElement.pivot;
 

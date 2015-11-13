@@ -27,46 +27,16 @@ namespace BK_GPU {
  * @param element
  * @return
  */
-void BKInstance::nextNonPivot(int pivot)
+void BKInstance::nextNonPivot(int pivot,int index)
 {
 	int NullValue;
 	//Obtain the TopElement
 	stack->topElement(&topElement);
 
-	//CudaError(cudaStreamSynchronize(*(this->Stream)));
-
-	//AdjacencySize
-	int adjacencyPivotSize = host_graph->rowOffset[pivot+1] - host_graph->rowOffset[pivot];
-
-	//Obtain the elements for the bdata
-	unsigned int *bdata = gpuGraph->Columns + host_graph->rowOffset[pivot];
-	int  bcount = adjacencyPivotSize;
-
-	//obtain the elements for the adata
-	unsigned int *adata = (Ng->data) +topElement.beginP;
-	int  acount = topElement.currPSize;
-
-	unsigned *ptr;
-
-	size_t requiredSize = sizeof(uint)*(topElement.currPSize);
-
-	//Allocate memory of size 2*currP
-	CudaError(cudaMalloc(&ptr,requiredSize));
-
-//	//Sort P segment once
-//	if(topElement.currPSize > 1)
-//		CudaError(cub::DeviceRadixSort::SortKeys(ptr,requiredSize,adata,adata,acount,0,sizeof(uint)*8,*(this->Stream)));
-
-	int currNeighbour,non_neighbours;
-
-	//This sorted search is used to know the values which are non-neighbours with respect to pivot.
-	//This values are indicated with 0s
-	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-					adata, acount, bdata, bcount, ptr, ptr, **Context,
-					&currNeighbour, &non_neighbours);
+	unsigned nextCandidateNode = tracker->elements->at(tracker->size() - 1 - index);
 
 	//Locate and swap the last zeroes.
-	GpuArraySwapNonPivot(Ng,ptr,topElement.beginP,topElement.beginP + topElement.currPSize - 1,currNeighbour,*(this->Stream));
+	GpuArraySwapNonPivot(Ng,topElement.beginP,topElement.beginP + topElement.currPSize - 1,nextCandidateNode,topElement.beginR,*(this->Stream));
 
 	// Check bounds and swap if the selected element is not at beginR - 1 position
 	if((topElement.beginP + topElement.currPSize - 1) != (topElement.beginR - 1))
@@ -74,15 +44,13 @@ void BKInstance::nextNonPivot(int pivot)
 		GpuSwap(Ng,topElement.beginP + topElement.currPSize - 1,topElement.beginR - 1,*(this->Stream));
 	}
 
-	unsigned nextCandidateNode; //= Ng->data[topElement.beginR-1];
 
-	CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginR - 1 ,sizeof(unsigned ),cudaMemcpyDeviceToHost));
+	//CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginR - 1 ,sizeof(unsigned ),cudaMemcpyDeviceToHost));
 
 
-	bdata  = (Ng->data) + host_graph->rowOffset[nextCandidateNode];
-	bcount = host_graph->rowOffset[nextCandidateNode+1] - host_graph->rowOffset[nextCandidateNode];
+	unsigned *bdata  = (Ng->data) + host_graph->rowOffset[nextCandidateNode];
+	int bcount = host_graph->rowOffset[nextCandidateNode+1] - host_graph->rowOffset[nextCandidateNode];
 
-	CudaError(cudaFree(ptr));
 
 	#pragma omp parallel num_threads(2)
 	{
@@ -123,6 +91,8 @@ void BKInstance::nextNonPivot(int pivot)
 						CudaError(cudaFree(d_temp_storage));
 				}
 			}
+
+			int currNeighbour,non_neighbours;
 
 			//Intersection of currP with the neighbors of nextCandidateNode
 			SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(

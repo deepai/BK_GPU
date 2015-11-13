@@ -9,16 +9,17 @@
 
 namespace BK_GPU {
 
-RecursionStack::RecursionStack(int size,cudaStream_t &stream) {
+RecursionStack::RecursionStack(int size) {
 	// TODO Auto-generated constructor stub
 	top=0;
-	CudaError(cudaMalloc(&elements,sizeof(int)*size));
+	elements=new std::vector<unsigned>();
+	elements->reserve(size);
 
 }
 
 RecursionStack::~RecursionStack()
 {
-	CudaError(cudaFree(this->elements));
+	elements->clear();
 }
 
 } /* namespace BK_GPU */

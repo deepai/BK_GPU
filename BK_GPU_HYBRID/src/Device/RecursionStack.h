@@ -9,6 +9,7 @@
 #define RECURSIONSTACK_H_
 
 #include "../utilities.h"
+#include <vector>
 
 namespace BK_GPU {
 
@@ -16,31 +17,28 @@ class RecursionStack {
 public:
 
 	int top;
-	unsigned *elements;
+	std::vector<unsigned> *elements;
 
-	RecursionStack(int size,cudaStream_t &stream);
+	RecursionStack(int size);
 	~RecursionStack();
 
 
 	void push(int value)
 	{
-		CudaError(cudaMemcpy(elements+top,&value,sizeof(int),cudaMemcpyHostToDevice));
-		top++;
+		elements->push_back(value);
+		top=elements->size();
 	}
 
 	void pop(int count)
 	{
-		top-=count;
+		elements->pop_back();
+		top = elements->size();
 		//DEV_SYNC;
 	}
 
-	int getTopElement()
+	unsigned getTopElement()
 	{
-		int topVal;
-
-		CudaError((cudaMemcpy(&topVal,elements+top,sizeof(int),cudaMemcpyHostToDevice)));
-
-		return topVal;
+		return elements->back();
 	}
 
 

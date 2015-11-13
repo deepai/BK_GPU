@@ -50,7 +50,7 @@ public:
 	void printClique(int CliqueSize,int beginClique);
 	void moveToX(int pivot);
 	void moveFromXtoP();
-	void nextNonPivot(int pivot);
+	void nextNonPivot(int pivot,int index);
 };
 
 

@@ -224,6 +224,7 @@ This L array is used to first sort the neighbour array values by Psize
 	//#pragma omp parallel for
 	for(int i=0;i<L.size();i++)
 	{
+
 		//ThreadId of each omp thread starting from 0.
 		int threadIdx=i;
 		//printf("tid is %d\n",tid);

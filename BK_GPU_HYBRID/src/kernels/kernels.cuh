@@ -36,6 +36,6 @@ extern "C"
 void GpuArrayRearrangeXtoP(BK_GPU::NeighbourGraph *graph,unsigned *darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream);
 
 extern "C"
-void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,unsigned *darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream);
+void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int start_offset,int end_offset,unsigned Node,int beginR,cudaStream_t &stream);
 
 #endif /* KERNELS_CUH_ */

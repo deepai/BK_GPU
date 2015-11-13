@@ -11,7 +11,7 @@
  * @param countOnes
  */
 __global__
-void KernelSwapNonPivot(unsigned *dPos,unsigned* darray,int start_offset,int end_offset,int countOnes)
+void KernelSwapNonPivot(unsigned *data,int start_offset,int end_offset,int beginR,unsigned currentNode)
 {
 	__shared__ unsigned pos;
 
@@ -20,57 +20,45 @@ void KernelSwapNonPivot(unsigned *dPos,unsigned* darray,int start_offset,int end
 	//ThreadIndex
 	int tid=threadIdx.x + blockIdx.x*blockDim.x;
 
-	if(tid==0)
-		pos=start_offset;
-
-	__syncthreads();
-
 	if(tid + start_offset > end_offset)
 		return;
 
-	//get the current prefixsum value
-	unsigned currVal=darray[tid];
+	int destination;
+	unsigned currValue = data[tid + start_offset];
 
-	if(currVal == 0)
-		atomicMax(&pos,(unsigned)tid);
-
-	__syncthreads();
-
-	//update from the local shared memory to the global
-	if(threadIdx.x == 0)
+	//set the destination for each value.
+	if(currValue < currentNode) //destination for values less than the pivot remains same
 	{
-		atomicMax(dPos,pos);
+		destination = tid + start_offset;
 	}
+	else if(currValue > currentNode) // destination for values greater than pivot is decreased by 1
+	{
+		destination = tid + start_offset - 1;
+	}
+	else //pivot element is copied at the end_offset
+	{
+		destination = end_offset;
+	}
+
+	__syncthreads(); //synchronize
+
+	data[destination] = currValue; //copy the current value to the destination array.
+
 }
 
 extern "C"
-void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,unsigned* darray,int start_offset,int end_offset,int countOnes,cudaStream_t &stream)
+void GpuArraySwapNonPivot(BK_GPU::NeighbourGraph *graph,int start_offset,int end_offset,unsigned Node,int beginR,cudaStream_t &stream)
 {
 	int numElements = end_offset - start_offset + 1;
 
 	if(numElements < 2)
 		return;
 
-	unsigned *d_pos;
+	//CudaError(cudaMalloc(&d_pos,sizeof(int)));
 
-	CudaError(cudaMalloc(&d_pos,sizeof(int)));
-
-	KernelSwapNonPivot<<<ceil((double)numElements/128),128,0,stream>>>(d_pos,darray,start_offset,end_offset,countOnes);
+	KernelSwapNonPivot<<<ceil((double)numElements/128),128,0,stream>>>(graph->data,start_offset,end_offset,beginR,Node);
 
 	CudaError(cudaStreamSynchronize(stream));
-
-	unsigned pos_offset;
-
-	CudaError(cudaMemcpy(&pos_offset,d_pos,sizeof(unsigned),cudaMemcpyDeviceToHost));
-
-	if(pos_offset == end_offset)
-		return;
-
-	GpuSwap(graph,pos_offset,end_offset,stream);
-
-	CudaError(cudaFree(d_pos));
-
-	return;
 
 }
 
