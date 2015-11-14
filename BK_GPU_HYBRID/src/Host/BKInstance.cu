@@ -284,8 +284,9 @@ int BKInstance::processPivot(BK_GPU::StackElement &element) {
 			//Declare a vector of size non_neighbours + 1;
 			unsigned *list_non_neighbour = new unsigned[max(1,non_neighbours)];
 
+
 			//Copy back the non_neighbours from device to the list.
-			CudaError(cudaMemcpy(list_non_neighbour,Ng->data + topElement.beginP + currNeighbour,sizeof(unsigned) * non_neighbours,cudaMemcpyDeviceToHost));
+			CudaError(cudaMemcpyAsync(list_non_neighbour,Ng->data + topElement.beginP + currNeighbour,sizeof(unsigned) * non_neighbours,cudaMemcpyDeviceToHost,currStream));
 
 			//push main pivot
 			tracker->push(hptr[max_index]);
@@ -621,7 +622,9 @@ void BKInstance::moveFromXtoP()
 	}
 
 	//Memory Allocation memcpy
-	CudaError(cudaMemcpy(d_in,Non_neighbours,sizeof(unsigned) * NumValuesToMoveFromXToP,cudaMemcpyHostToDevice));
+	CudaError(cudaMemcpyAsync(d_in,Non_neighbours,sizeof(unsigned) * NumValuesToMoveFromXToP,cudaMemcpyHostToDevice,*(this->Stream)));
+
+	CudaError(cudaStreamSynchronize(*(this->Stream)));
 
 	delete[] Non_neighbours;
 
