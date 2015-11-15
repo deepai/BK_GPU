@@ -33,8 +33,8 @@ void kernel_CopyAddress(int *data,int beginP,unsigned int *dptr,int currPSize)
  */
 void GpuCopyOffsetAddresses(BK_GPU::NeighbourGraph *graph,int beginP, BK_GPU::GPU_CSR *InputGraph,unsigned int *host,int currPSize,cudaStream_t &stream)
 {
-	CudaError(cudaStreamSynchronize(stream));
-	//Copy back the values from the dptr to host memory
-	CudaError(cudaMemcpy(host,graph->data + beginP, sizeof(unsigned)*currPSize,cudaMemcpyDeviceToHost));
 
+	//Copy back the values from the dptr to host memory
+	CudaError(cudaMemcpyAsync(host,graph->data + beginP, sizeof(unsigned)*currPSize,cudaMemcpyDeviceToHost,stream));
+	CudaError(cudaStreamSynchronize(stream));
 }
