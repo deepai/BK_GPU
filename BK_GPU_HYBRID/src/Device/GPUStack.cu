@@ -14,14 +14,16 @@ GPU_Stack::GPU_Stack(int size) {
 	// TODO Auto-generated constructor stub
 	top = 0;
 	maxCliqueSize = size;
-	CudaError(cudaMalloc(&elements, sizeof(StackElement) * (size+1)));
+	//CudaError(cudaMalloc(&elements, sizeof(StackElement) * (size+1)));
+	elements = new StackElement[sizeof(StackElement)*(size + 1)];
 
 }
 
 
 GPU_Stack::~GPU_Stack() {
 	// TODO Auto-generated destructor stub
-	CudaError(cudaFree(elements));
+	//CudaError(cudaFree(elements));
+	delete[] elements;
 }
 
 

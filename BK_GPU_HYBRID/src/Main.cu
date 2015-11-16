@@ -116,8 +116,7 @@ int main(int argc, char * argv[]) {
 
 	g1->calculateNeighbourArray();
 
-	int Core =
-			g1->KCoreValues[g1->neighbourArray[g1->neighbourArray.size() - 1][0]];
+	int Core = g1->KCoreValues[g1->neighbourArray[g1->neighbourArray.size() - 1][0]];
 	int loc = g1->neighbourArray.size() - 1;
 
 	printf("CoreSize = %d\n", Core);
@@ -221,10 +220,11 @@ This L array is used to first sort the neighbour array values by Psize
 		Contextptr[i]=mgpu::CreateCudaDeviceAttachStream(stream[i]);
 
 	//MultiThreaded Application
-	//#pragma omp parallel for
+	#pragma omp parallel for
 	for(int i=0;i<L.size();i++)
 	{
-
+		if(i>10)
+			continue;
 		//ThreadId of each omp thread starting from 0.
 		int threadIdx=omp_get_thread_num();
 		//printf("tid is %d\n",tid);
@@ -233,7 +233,7 @@ This L array is used to first sort the neighbour array values by Psize
 		BK_GPU::BKInstance *instance;
 
 		//Make an object corresponding to the instance.
-		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],Contextptr,numThreads,0);
+		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],Contextptr,numThreads,threadIdx);
 
 		//Invoke the RunCliqueFinder Method.
 		instance->RunCliqueFinder(i);
