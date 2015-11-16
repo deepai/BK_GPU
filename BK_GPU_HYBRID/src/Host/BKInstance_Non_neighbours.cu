@@ -29,160 +29,151 @@ namespace BK_GPU {
  */
 void BKInstance::nextNonPivot(int pivot,int index)
 {
+
+	cudaStream_t currStream = Context[threadIndex]->Stream();
+
 	int NullValue;
 	//Obtain the TopElement
-	stack->topElement(&topElement);
+	stack->topElement(&topElement,currStream);
 
+	//next pivot to consider is obtained from the current top of the stack - index position
 	unsigned nextCandidateNode = tracker->elements->at(tracker->size() - 1 - index);
 
 	//Locate and swap the last zeroes.
-	GpuArraySwapNonPivot(Ng,topElement.beginP,topElement.beginP + topElement.currPSize - 1,nextCandidateNode,topElement.beginR,*(this->Stream));
+	GpuArraySwapNonPivot(Ng,topElement.beginP,topElement.beginP + topElement.currPSize - 1,nextCandidateNode,topElement.beginR,currStream);
 
 	// Check bounds and swap if the selected element is not at beginR - 1 position
 	if((topElement.beginP + topElement.currPSize - 1) != (topElement.beginR - 1))
 	{
-		GpuSwap(Ng,topElement.beginP + topElement.currPSize - 1,topElement.beginR - 1,*(this->Stream));
+		GpuSwap(Ng,topElement.beginP + topElement.currPSize - 1,topElement.beginR - 1,currStream);
 	}
 
 
 	//CudaError(cudaMemcpy(&nextCandidateNode,Ng->data + topElement.beginR - 1 ,sizeof(unsigned ),cudaMemcpyDeviceToHost));
+	//adjacencyList of the Pivot
+	unsigned *adjacencyListPivot  = this->gpuGraph->Columns + host_graph->rowOffset[nextCandidateNode];
+	int adjacencySize = host_graph->rowOffset[nextCandidateNode+1] - host_graph->rowOffset[nextCandidateNode];
+
+	//Psegment Input Data
+	unsigned *PsegmentInputData = Ng->data + topElement.beginP;
+	unsigned *PsegmentResults;
+
+	//PsegmentResults are required to store the results of the Sorted Search
+	CudaError(cudaMalloc(&PsegmentResults,sizeof(unsigned)*topElement.currPSize));
 
 
-	unsigned *bdata  = (Ng->data) + host_graph->rowOffset[nextCandidateNode];
-	int bcount = host_graph->rowOffset[nextCandidateNode+1] - host_graph->rowOffset[nextCandidateNode];
-
-
-	#pragma omp parallel num_threads(2)
+	if(topElement.currPSize > 1)
 	{
-		int threadId = omp_get_thread_num();
+		//update the size of acount
 
-		if(threadId == 0)
+		//if P segment was greater than 2, then sort the remaining P segment.
+		if(topElement.currPSize > 2)
 		{
+			void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-			cudaStream_t currStream = Context[threadId]->Stream();
+			CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,PsegmentInputData,PsegmentInputData,topElement.currPSize - 1,0,sizeof(uint)*8,currStream));
 
-			int PCount = topElement.currPSize - 1;
-			unsigned *Pdata = Ng->data + topElement.beginP;
-			unsigned *aux;
+			CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-			CudaError(cudaMalloc(&aux,sizeof(unsigned)*topElement.beginP));
+			if(d_temp_storage==NULL)
+						d_temp_storage=&NullValue;
 
-			if(topElement.currPSize > 1)
-			{
-				//update the size of acount
-
-				//if P segment was greater than 2, then sort the remaining P segment.
-				if(topElement.currPSize > 2)
-				{
-					void *d_temp_storage=NULL;size_t d_temp_size=0;
-
-					CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,Pdata,Pdata,PCount,0,sizeof(uint)*8,currStream));
-
-					CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
-
-					if(d_temp_storage==NULL)
-								d_temp_storage=&NullValue;
-
-					CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,Pdata,Pdata,PCount,0,sizeof(uint)*8,currStream));
-
-					CudaError(cudaStreamSynchronize(currStream));
-
-					if(d_temp_storage!=&NullValue)
-						CudaError(cudaFree(d_temp_storage));
-				}
-			}
-
-			int currNeighbour,non_neighbours;
-
-			//Intersection of currP with the neighbors of nextCandidateNode
-			SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-								Pdata, PCount, bdata, bcount, aux, aux, *(Context[threadId]),
-								&currNeighbour, &non_neighbours);
+			CudaError(cub::DeviceRadixSort::SortKeys(d_temp_storage,d_temp_size,PsegmentInputData,PsegmentInputData,topElement.currPSize - 1,0,sizeof(uint)*8,currStream));
 
 			CudaError(cudaStreamSynchronize(currStream));
 
-			topElement.currPSize = currNeighbour;
-
-			//Do an Inclusive Scan on the intersection values of the adata
-			if(topElement.currPSize > 2)
-			{
-				void *d_temp_storage=NULL;size_t d_temp_size=0;
-
-				//Ist Invocation calculates the amount of memory required for the temporary array.
-				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,aux,aux,topElement.currPSize - 1,currStream));
-
-				CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
-
-				//This step does the actual inclusiveSum
-				CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,aux,aux,topElement.currPSize - 1,currStream));
-
-				CudaError(cudaStreamSynchronize(currStream));
-
-				if(d_temp_storage!=&NullValue)
-					CudaError(cudaFree(d_temp_storage));
-
-			}
-
-			//Non_neighbour of the current selected candidate Vertex
-			non_neighbours = topElement.currPSize - 1 - currNeighbour;
-
-			//if size of neighbors is atleast 1 and less than currPSize
-			if((currNeighbour>0) && (currNeighbour < (topElement.currPSize - 1)))
-			{
-				GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, aux,
-					topElement.beginP, topElement.beginP + topElement.currPSize - 2,non_neighbours,currStream);
-			}
-
+			if(d_temp_storage!=&NullValue)
+				CudaError(cudaFree(d_temp_storage));
 		}
-		else
+	}
+
+	int currNeighbour,non_neighbours;
+
+	//Intersection of currP with the neighbors of nextCandidateNode
+	SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
+						PsegmentInputData, topElement.currPSize - 1, adjacencyListPivot, adjacencySize, PsegmentResults, PsegmentResults, *(Context[threadIndex]),
+						&currNeighbour, &non_neighbours);
+
+	CudaError(cudaStreamSynchronize(currStream));
+
+	topElement.currPSize = currNeighbour;
+
+	//Do an Inclusive Scan on the intersection values of the adata
+	if(topElement.currPSize > 2)
+	{
+		void *d_temp_storage=NULL;size_t d_temp_size=0;
+
+		//Ist Invocation calculates the amount of memory required for the temporary array.
+		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,PsegmentResults,PsegmentResults,topElement.currPSize - 1,currStream));
+
+		CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
+
+		//This step does the actual inclusiveSum
+		CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,PsegmentResults,PsegmentResults,topElement.currPSize - 1,currStream));
+
+		CudaError(cudaStreamSynchronize(currStream));
+
+		if(d_temp_storage!=&NullValue)
+			CudaError(cudaFree(d_temp_storage));
+
+	}
+
+	//Non_neighbour of the current selected candidate Vertex
+	non_neighbours = topElement.currPSize - 1 - currNeighbour;
+
+	//if size of neighbors is atleast 1 and less than currPSize
+	if((currNeighbour>0) && (currNeighbour < (topElement.currPSize - 1)))
+	{
+		GpuArrayRearrangeP(this->Ng, this->stack, this->gpuGraph, PsegmentResults,
+			topElement.beginP, topElement.beginP + topElement.currPSize - 2,non_neighbours,currStream);
+	}
+
+
+	unsigned *XsegmentInputData = Ng->data + topElement.beginX;
+	unsigned *auxXsegmentData;
+
+	//Current X size
+
+	if(topElement.currXSize!=0)
+	{
+		//Auxilliary X segment Data
+		CudaError(cudaMalloc(&auxXsegmentData,sizeof(int)*topElement.currXSize));
+
+		int NeighboursinX, nonNeighboursinX;
+
+		SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
+						XsegmentInputData, topElement.currXSize, adjacencyListPivot, adjacencySize, auxXsegmentData,auxXsegmentData, *(Context[threadIndex]),
+						&NeighboursinX, &nonNeighboursinX);
+
+		CudaError(cudaStreamSynchronize(currStream));
+
+		if(topElement.currXSize > 1)
 		{
-			cudaStream_t currStream = Context[threadId]->Stream();
+			/***
+			 * * Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
+			 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
+			void *d_temp_storage=NULL;size_t d_temp_size=0;
 
-			int XCount = topElement.currXSize;
-			unsigned *Xdata = Ng->data + topElement.beginX;
-			unsigned *auxX;
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxXsegmentData,auxXsegmentData,topElement.currXSize,currStream));
 
-			CudaError(cudaMalloc(&auxX,sizeof(int)*topElement.currXSize));
+			CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
 
-			if(topElement.currXSize!=0)
-			{
+			CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxXsegmentData,auxXsegmentData,topElement.currXSize,currStream));
 
-				int NeighboursinX, nonNeighboursinX;
+			CudaError(cudaStreamSynchronize(currStream));
 
-				SortedSearch<MgpuBoundsLower, MgpuSearchTypeMatch, MgpuSearchTypeNone>(
-								Xdata, XCount, bdata, bcount, auxX,auxX, **Context,
-								&NeighboursinX, &nonNeighboursinX);
-
-				CudaError(cudaStreamSynchronize(currStream));
-
-				if(topElement.currXSize > 1)
-				{
-					/***
-					 * * Do a Scan on the current dptr array. We can use the prefix sum to rearrange the neighbours and non-neighbours
-					 */		//thrust::inclusive_scan(dptr, dptr + currX, dptr);
-					void *d_temp_storage=NULL;size_t d_temp_size=0;
-
-					CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxX,auxX,topElement.currXSize,currStream));
-
-					CudaError(cudaMalloc(&d_temp_storage,d_temp_size));
-
-					CudaError(cub::DeviceScan::InclusiveSum(d_temp_storage,d_temp_size,auxX,auxX,topElement.currXSize,currStream));
-
-					CudaError(cudaStreamSynchronize(currStream));
-
-					if(d_temp_storage!=&NullValue)
-						CudaError(cudaFree(d_temp_storage));
-				}
-
-				nonNeighboursinX = topElement.currXSize - NeighboursinX;
-
-				if((NeighboursinX > 0) && (NeighboursinX < topElement.currXSize ))
-					GpuArrayRearrangeX(Ng,stack,gpuGraph,auxX,topElement.beginX,topElement.beginX + topElement.currXSize - 1,nonNeighboursinX,currStream);
-
-				topElement.currXSize = NeighboursinX;
-
-			}
+			if(d_temp_storage!=&NullValue)
+				CudaError(cudaFree(d_temp_storage));
 		}
+
+		nonNeighboursinX = topElement.currXSize - NeighboursinX;
+
+		if((NeighboursinX > 0) && (NeighboursinX < topElement.currXSize ))
+			GpuArrayRearrangeX(Ng,stack,gpuGraph,auxXsegmentData,topElement.beginX,topElement.beginX + topElement.currXSize - 1,nonNeighboursinX,currStream);
+
+		topElement.currXSize = NeighboursinX;
+
+		CudaError(cudaFree(auxXsegmentData));
 	}
 
 	topElement.beginR = topElement.beginR - 1;

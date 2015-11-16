@@ -226,14 +226,14 @@ This L array is used to first sort the neighbour array values by Psize
 	{
 
 		//ThreadId of each omp thread starting from 0.
-		int threadIdx=i;
+		int threadIdx=omp_get_thread_num();
 		//printf("tid is %d\n",tid);
 
 		//Instance variable reference. Instance variable is responsible to find Cliques starting with a vertex.
 		BK_GPU::BKInstance *instance;
 
 		//Make an object corresponding to the instance.
-		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],stream[0],Contextptr,numThreads);
+		instance=new BK_GPU::BKInstance(g1,gpuGraph,Ng,stack[L[i].index],Contextptr,numThreads,0);
 
 		//Invoke the RunCliqueFinder Method.
 		instance->RunCliqueFinder(i);

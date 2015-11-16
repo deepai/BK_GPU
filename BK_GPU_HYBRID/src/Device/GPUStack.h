@@ -24,23 +24,32 @@ public:
 	~GPU_Stack();
 	//void* operator new[](std::size_t count);
 
-	void topElement(StackElement *topElement) {
-		CudaError(cudaMemcpy(topElement,elements+top-1,sizeof(StackElement),cudaMemcpyDeviceToHost));
+	void topElement(StackElement *topElement,cudaStream_t &stream) {
+		CudaError(cudaMemcpyAsync(topElement,elements+top-1,sizeof(StackElement),cudaMemcpyDeviceToHost,stream));
+		CudaError(cudaStreamSynchronize(stream));
 	}
 
-	void secondElement(StackElement *secondElement)
+	void secondElement(StackElement *secondElement,cudaStream_t &stream)
 	{
-		CudaError(cudaMemcpy(secondElement,elements+top-2,sizeof(StackElement),cudaMemcpyDeviceToHost));
+		CudaError(cudaMemcpyAsync(secondElement,elements+top-2,sizeof(StackElement),cudaMemcpyDeviceToHost,stream));
+		CudaError(cudaStreamSynchronize(stream));
 	}
 
 	/**
 	 * Push topElement into the stack, top is incrememented by 1 place.
 	 * @param topElement
 	 */
-	void push(StackElement *topElement) //true indicates forward and false indicates backward)
+	void push(StackElement *topElement,cudaStream_t &stream) //true indicates forward and false indicates backward)
 			{
-		CudaError(cudaMemcpy(elements+top,topElement,sizeof(StackElement),cudaMemcpyHostToDevice));
+		CudaError(cudaMemcpyAsync(elements+top,topElement,sizeof(StackElement),cudaMemcpyHostToDevice,stream));
+		CudaError(cudaStreamSynchronize(stream));
 		++top;
+	}
+
+	void push(StackElement *topElement) //true indicates forward and false indicates backward)
+	{
+			CudaError(cudaMemcpy(elements+top,topElement,sizeof(StackElement),cudaMemcpyHostToDevice));
+			++top;
 	}
 
 	/**
